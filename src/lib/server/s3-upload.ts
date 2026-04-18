@@ -22,14 +22,24 @@ export function publicObjectUrl(bucket: string, region: string, key: string): st
 	return `https://${bucket}.s3.${region}.amazonaws.com/${safe}`;
 }
 
+export type PutPhotoFormat = {
+	/** Sin punto: png, jpg, webp… */
+	extension: string;
+	contentType: string;
+};
+
 /**
- * Sube bytes PNG al prefijo `photos/` del bucket configurado.
- * @returns URL pública del objeto
+ * Sube una imagen al prefijo `photos/` del bucket.
  */
-export async function putPngPhoto(body: Buffer, filenameBase: string): Promise<{ key: string; url: string }> {
+export async function putPhoto(
+	body: Buffer,
+	filenameBase: string,
+	format: PutPhotoFormat
+): Promise<{ key: string; url: string }> {
 	const { region, bucket, photosPrefix } = getS3PhotosConfig();
 	const safe = filenameBase.replace(/[^a-zA-Z0-9-]/g, '') || randomUUID();
-	const key = `${photosPrefix}${safe}.png`;
+	const ext = format.extension.replace(/^\./, '');
+	const key = `${photosPrefix}${safe}.${ext}`;
 
 	const client = getClient(region);
 	await client.send(
@@ -37,10 +47,15 @@ export async function putPngPhoto(body: Buffer, filenameBase: string): Promise<{
 			Bucket: bucket,
 			Key: key,
 			Body: body,
-			ContentType: 'image/png',
+			ContentType: format.contentType,
 			CacheControl: 'public, max-age=31536000, immutable'
 		})
 	);
 
 	return { key, url: publicObjectUrl(bucket, region, key) };
+}
+
+/** Sube PNG (capturas del editor). */
+export async function putPngPhoto(body: Buffer, filenameBase: string): Promise<{ key: string; url: string }> {
+	return putPhoto(body, filenameBase, { extension: 'png', contentType: 'image/png' });
 }

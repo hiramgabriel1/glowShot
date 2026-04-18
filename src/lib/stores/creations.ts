@@ -139,16 +139,28 @@ export async function saveFrameToCreations(
 	return 'added';
 }
 
-function loadImageDimensionsFromDataUrl(dataUrl: string): Promise<{ w: number; h: number }> {
+function loadImageDimensions(src: string): Promise<{ w: number; h: number }> {
 	return new Promise((resolve, reject) => {
 		if (typeof Image === 'undefined') {
 			reject(new Error('no Image'));
 			return;
 		}
-		const img = new Image();
-		img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
-		img.onerror = () => reject(new Error('decode'));
-		img.src = dataUrl;
+		const load = (withCors: boolean) => {
+			const img = new Image();
+			if (withCors && (src.startsWith('http://') || src.startsWith('https://'))) {
+				img.crossOrigin = 'anonymous';
+			}
+			img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+			img.onerror = () => {
+				if (withCors && (src.startsWith('http://') || src.startsWith('https://'))) {
+					load(false);
+				} else {
+					reject(new Error('decode'));
+				}
+			};
+			img.src = src;
+		};
+		load(true);
 	});
 }
 
@@ -170,7 +182,7 @@ function fitFrameSizeToImage(w: number, h: number, maxSide: number): { fw: numbe
  */
 export async function openCreationInEditor(creation: Creation): Promise<void> {
 	try {
-		const { w, h } = await loadImageDimensionsFromDataUrl(creation.imageDataUrl);
+		const { w, h } = await loadImageDimensions(creation.imageDataUrl);
 		const { fw, fh } = fitFrameSizeToImage(w, h, 1200);
 		frameWidth.set(fw);
 		frameHeight.set(fh);

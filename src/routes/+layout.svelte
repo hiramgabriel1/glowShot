@@ -24,14 +24,23 @@
 
 			return Promise.all([
 				listen<{ dataUrl: string }>('snap-import', (e) => {
-					const url = e.payload?.dataUrl;
-					if (typeof url === 'string' && url.startsWith('data:image')) {
+					void (async () => {
+						const url = e.payload?.dataUrl;
+						if (typeof url !== 'string' || !url.startsWith('data:image')) return;
 						importedFromGallerySnapshot.set(false);
 						importedImageDataUrl.set(url);
 						mockupEnabled.set(false);
 						topTab.set('editor');
-						toast.success('Captura lista en el marco');
-					}
+						const { tryUploadDataUrlAsPhoto } = await import(
+							'$lib/snapforge/upload-creation-s3'
+						);
+						const remote = await tryUploadDataUrlAsPhoto(url);
+						if (remote) {
+							toast.success('Captura en el marco y copia en la nube');
+						} else {
+							toast.success('Captura lista en el marco');
+						}
+					})();
 				}),
 				listen('snap-select-unavailable', () => {
 					toast.info(

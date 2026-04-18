@@ -74,12 +74,16 @@
 							class="block w-full text-left"
 							onclick={() => (preview = c)}
 						>
-							<div class="aspect-video w-full overflow-hidden bg-[#0f0f0f]">
+							<div
+								class="flex aspect-video w-full items-center justify-center overflow-hidden bg-[#0f0f0f]"
+							>
 								<img
 									src={c.imageDataUrl}
 									alt=""
-									class="h-full w-full object-cover transition group-hover:scale-[1.02]"
+									class="max-h-full max-w-full object-contain transition group-hover:scale-[1.02]"
 									loading="lazy"
+									decoding="async"
+									referrerpolicy="no-referrer"
 								/>
 							</div>
 							<div class="p-2.5">
@@ -150,7 +154,14 @@
 					<Pencil class="size-4 shrink-0" strokeWidth={2} />
 					Editar en el editor
 				</button>
-				<img src={preview.imageDataUrl} alt="" class="max-h-[85vh] w-auto max-w-full rounded-lg" />
+				<div class="flex max-h-[85vh] w-full items-center justify-center overflow-auto rounded-lg bg-[#0f0f0f]">
+					<img
+						src={preview.imageDataUrl}
+						alt=""
+						class="max-h-[85vh] w-auto max-w-full object-contain"
+						referrerpolicy="no-referrer"
+					/>
+				</div>
 				<p class="px-2 pb-2 pt-3 text-center text-[13px] text-zinc-400">{preview.name}</p>
 			</div>
 		</div>

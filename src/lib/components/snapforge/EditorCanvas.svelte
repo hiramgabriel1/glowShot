@@ -5,6 +5,7 @@
 	import { saveFrameToCreations } from '$lib/stores/creations';
 	import { toast } from '$lib/stores/toast';
 	import { errorMessage } from '$lib/utils/error-message';
+	import { tryUploadImportedPhotoFile } from '$lib/snapforge/upload-creation-s3';
 	import { readImageFileAsDataUrl } from '$lib/utils/read-image-file';
 	import DashboardMockup from './DashboardMockup.svelte';
 	import {
@@ -97,11 +98,11 @@
 		return () => setSnapforgeExportFrame(null);
 	});
 
-	let lastHandledNewProjectIntent = 0;
+	/** Consumir el intent en el mismo tick evita que al remontar el canvas se vuelva a ejecutar el flujo. */
 	$effect(() => {
 		const id = $newProjectIntent;
-		if (id <= lastHandledNewProjectIntent) return;
-		lastHandledNewProjectIntent = id;
+		if (id === 0) return;
+		newProjectIntent.set(0);
 		void runNewProjectAfterConfirm();
 	});
 
@@ -196,7 +197,12 @@
 			importedFromGallerySnapshot.set(false);
 			importedImageDataUrl.set(url);
 			mockupEnabled.set(false);
-			toast.success('Imagen añadida al marco');
+			const remote = await tryUploadImportedPhotoFile(file);
+			if (remote) {
+				toast.success('Imagen en el marco y copia en la nube');
+			} else {
+				toast.success('Imagen añadida al marco');
+			}
 		} catch (err) {
 			toast.error(errorMessage(err) || 'No se pudo cargar la imagen');
 		}

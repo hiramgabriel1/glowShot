@@ -41,7 +41,7 @@
 			<button
 				type="button"
 				class="rounded-md p-1.5 text-zinc-500 transition hover:bg-white/10 hover:text-zinc-300"
-				title="Ocultar herramientas"
+				title="Ocultar herramientas ( [ · Ctrl/Cmd+B )"
 				aria-label="Ocultar panel de herramientas"
 				onclick={() => leftSidebarExpanded.set(false)}
 			>
@@ -138,7 +138,7 @@
 		<button
 			type="button"
 			class="rounded-lg p-2 text-zinc-500 transition hover:bg-white/10 hover:text-zinc-300"
-			title="Mostrar herramientas"
+			title="Mostrar herramientas ( [ · Ctrl/Cmd+B )"
 			aria-label="Mostrar panel de herramientas"
 			onclick={() => leftSidebarExpanded.set(true)}
 		>

@@ -14,6 +14,42 @@
 		topTab
 	} from '$lib/stores/editor';
 
+	function isTypingTarget(el: EventTarget | null): boolean {
+		if (!(el instanceof HTMLElement)) return false;
+		const tag = el.tagName;
+		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+		if (el.isContentEditable) return true;
+		return el.closest('[contenteditable="true"]') != null;
+	}
+
+	function onPanelShortcut(e: KeyboardEvent) {
+		if ($topTab !== 'editor') return;
+		if (e.repeat) return;
+		if (isTypingTarget(e.target)) return;
+
+		const mod = e.metaKey || e.ctrlKey;
+
+		// [ — panel izquierdo (sin Cmd/Ctrl: evita chocar con Cmd+[ del navegador)
+		if (e.key === '[' && !mod && !e.altKey) {
+			e.preventDefault();
+			leftSidebarExpanded.update((v) => !v);
+			return;
+		}
+
+		// Cmd/Ctrl+B — herramientas (como barra lateral en editores)
+		if ((e.key === 'b' || e.key === 'B') && mod && !e.shiftKey && !e.altKey) {
+			e.preventDefault();
+			leftSidebarExpanded.update((v) => !v);
+			return;
+		}
+
+		// Cmd/Ctrl+L — propiedades
+		if ((e.key === 'l' || e.key === 'L') && mod && !e.shiftKey && !e.altKey) {
+			e.preventDefault();
+			rightSidebarExpanded.update((v) => !v);
+		}
+	}
+
 	onMount(() => {
 		if (!browser) return;
 		const mq = window.matchMedia('(max-width: 1100px)');
@@ -28,6 +64,8 @@
 		return () => mq.removeEventListener('change', collapseSidebars);
 	});
 </script>
+
+<svelte:window onkeydown={onPanelShortcut} />
 
 <div class="flex h-screen min-h-0 flex-col overflow-hidden bg-[#121212] text-zinc-200">
 	<AppHeader />

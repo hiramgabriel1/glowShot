@@ -51,7 +51,7 @@
 			<button
 				type="button"
 				class="shrink-0 rounded-md p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-				title="Ocultar panel"
+				title="Ocultar panel ( ⌘L / Ctrl+L )"
 				aria-label="Ocultar panel de propiedades"
 				onclick={() => rightSidebarExpanded.set(false)}
 			>
@@ -412,7 +412,7 @@
 		<button
 			type="button"
 			class="rounded-lg p-2 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-			title="Mostrar propiedades"
+			title="Mostrar propiedades ( ⌘L / Ctrl+L )"
 			aria-label="Mostrar panel de propiedades"
 			onclick={() => rightSidebarExpanded.set(true)}
 		>

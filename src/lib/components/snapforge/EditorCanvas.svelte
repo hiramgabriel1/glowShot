@@ -387,16 +387,14 @@
 									role="region"
 									aria-label="Marco vacío"
 								>
-									<ImagePlus class="size-10 shrink-0 text-zinc-500" strokeWidth={1.5} />
+									<ImagePlus class="size-10 shrink-0 text-white" strokeWidth={1.5} />
 									<div>
-										<p class="text-[14px] font-medium text-zinc-300">Marco vacío</p>
-										<p class="mt-1 text-[12px] text-zinc-500">
-											Arrastra una imagen o usa Importar
-										</p>
+										<p class="text-[14px] font-medium text-white">Marco vacío</p>
+										<p class="mt-1 text-[12px] text-white">Arrastra una imagen</p>
 									</div>
 									<button
 										type="button"
-										class="rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-zinc-200 transition hover:bg-white/10"
+										class="rounded-lg border border-white bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-white/10"
 										onclick={triggerImport}
 									>
 										Importar imagen

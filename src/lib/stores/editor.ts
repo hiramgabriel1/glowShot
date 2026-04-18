@@ -12,9 +12,8 @@ export const frameWidth = writable(1200);
 export const frameHeight = writable(675);
 export const aspectRatio = writable<AspectKey>('16:9');
 export const padding = writable(64);
-export const mockupEnabled = writable(true);
+export const mockupEnabled = writable(false);
 
-/** Imagen propia dentro del marco (data URL). Si existe, se muestra en lugar del mockup dashboard. */
 export const importedImageDataUrl = writable<string | null>(null);
 
 /**
@@ -78,9 +77,9 @@ function resetEditorBaseline(opts: { mockup: boolean }): void {
 	newProjectGeneration.update((n) => n + 1);
 }
 
-/** Restablece el editor con mockup por defecto (no borra Mis creaciones). */
+/** Restablece el editor con marco vacío (no borra Mis creaciones). */
 export function startNewProject(): void {
-	resetEditorBaseline({ mockup: true });
+	resetEditorBaseline({ mockup: false });
 }
 
 /** Marco vacío (sin mockup ni imagen) para importar una foto. */

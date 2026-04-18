@@ -336,7 +336,7 @@
 
 	<!-- Zoom bar -->
 	<div
-		class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/[0.08] bg-[#1f1f1f]/95 px-2 py-1.5 shadow-lg backdrop-blur-sm"
+		class="absolute bottom-3 left-1/2 z-20 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-full border border-white/[0.08] bg-[#1f1f1f]/95 px-1.5 py-1.5 shadow-lg backdrop-blur-sm sm:bottom-5 sm:max-w-[min(100vw-2rem,52rem)] sm:flex-nowrap sm:px-2"
 	>
 		<button
 			type="button"

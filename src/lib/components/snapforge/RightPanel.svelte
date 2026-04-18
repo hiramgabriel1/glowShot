@@ -31,7 +31,7 @@
 
 {#if $rightSidebarExpanded}
 	<aside
-		class="flex h-full min-w-[300px] w-[320px] max-w-[min(100vw,360px)] shrink-0 flex-col overflow-y-auto overflow-x-hidden border-l border-white/[0.06] bg-[#151515]"
+		class="flex h-full w-[clamp(260px,32vw,320px)] max-w-[min(92vw,380px)] shrink-0 flex-col overflow-y-auto overflow-x-hidden border-l border-white/[0.06] bg-[#151515]"
 		transition:fly={{ x: 20, duration: 200 }}
 	>
 		<div

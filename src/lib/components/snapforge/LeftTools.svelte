@@ -32,7 +32,7 @@
 
 {#if $leftSidebarExpanded}
 	<aside
-		class="flex h-full min-h-0 min-w-[220px] w-[228px] max-w-[min(100vw,280px)] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#111111]"
+		class="flex h-full min-h-0 w-[clamp(200px,26vw,228px)] max-w-[min(90vw,280px)] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#111111]"
 		transition:fly={{ x: -20, duration: 200 }}
 	>
 		<div
@@ -116,7 +116,7 @@
 				aria-label="Ajustes"
 			>
 				<Settings class="size-[18px] shrink-0" strokeWidth={1.75} />
-				<span class="text-[12px] font-medium">Ajustes</span>
+				<span class="hidden text-[12px] font-medium sm:inline">Ajustes</span>
 			</button>
 			<button
 				type="button"
@@ -125,7 +125,7 @@
 				aria-label="Perfil"
 			>
 				<User class="size-[18px] shrink-0" strokeWidth={1.75} />
-				<span class="text-[12px] font-medium">Perfil</span>
+				<span class="hidden text-[12px] font-medium sm:inline">Perfil</span>
 			</button>
 		</div>
 	</aside>

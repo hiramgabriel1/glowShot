@@ -29,7 +29,7 @@
 	role="region"
 	aria-label="Mis creaciones"
 >
-	<div class="border-b border-white/[0.06] px-6 py-4">
+	<div class="border-b border-white/[0.06] px-4 py-3 sm:px-6 sm:py-4">
 		<h2 class="text-lg font-semibold text-white">Mis creaciones</h2>
 		<p class="mt-1 text-[13px] text-zinc-500">
 			Se guardan en este dispositivo (navegador). Usa “Guardar” en el editor para añadir una vista
@@ -37,7 +37,7 @@
 		</p>
 	</div>
 
-	<div class="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+	<div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
 		{#if $creations.length === 0}
 			<div
 				class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/10 bg-[#1a1a1a]/50 py-20 text-center"
@@ -49,7 +49,9 @@
 				</p>
 			</div>
 		{:else}
-			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+			<div
+				class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 min-[640px]:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+			>
 				{#each $creations as c (c.id)}
 					<article
 						class="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1a1a] shadow-sm transition hover:border-white/15"

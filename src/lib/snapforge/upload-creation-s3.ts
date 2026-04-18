@@ -1,14 +1,8 @@
-/** Origen del backend con rutas `/api/*` (ej. `http://localhost:5173` en Tauri si el fetch relativo falla). Opcional: `.env` → `PUBLIC_UPLOAD_API_BASE`. */
-function uploadApiUrl(): string {
-	const raw = import.meta.env.PUBLIC_UPLOAD_API_BASE as string | undefined;
-	const base = typeof raw === 'string' ? raw.trim().replace(/\/$/, '') : '';
-	if (base) return `${base}/api/photos/upload`;
-	return '/api/photos/upload';
-}
+import { apiUrl } from '$lib/snapforge/api-public';
 
 async function postUpload(fd: FormData): Promise<string | null> {
 	try {
-		const res = await fetch(uploadApiUrl(), { method: 'POST', body: fd });
+		const res = await fetch(apiUrl('/api/photos/upload'), { method: 'POST', body: fd });
 		if (!res.ok) {
 			const text = await res.text().catch(() => '');
 			if (import.meta.env.DEV) {

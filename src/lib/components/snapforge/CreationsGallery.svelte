@@ -1,10 +1,69 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Pencil, Trash2, X } from 'lucide-svelte';
 	import { creations, openCreationInEditor } from '$lib/stores/creations';
 	import type { Creation } from '$lib/stores/creations';
 	import { toast } from '$lib/stores/toast';
+	import {
+		deletePhotoOnApi,
+		fetchPhotoGalleryFromApi
+	} from '$lib/snapforge/fetch-photo-gallery';
 
 	let preview = $state<Creation | null>(null);
+
+	let status = $state<'loading' | 'ok' | 'error'>('loading');
+	let remote = $state<Creation[]>([]);
+
+	/** Misma foto con URL pública vs firmada: deduplicar por key en el path S3. */
+	function s3ObjectKeyFromImageUrl(u: string): string | null {
+		try {
+			if (!u.startsWith('http://') && !u.startsWith('https://')) return null;
+			const { pathname } = new URL(u);
+			if (!pathname || pathname === '/') return null;
+			return pathname.startsWith('/') ? pathname.slice(1) : pathname;
+		} catch {
+			return null;
+		}
+	}
+
+	function mergeGallery(remoteList: Creation[], localList: Creation[]): Creation[] {
+		const remoteKeys = new Set<string>();
+		for (const r of remoteList) {
+			if (r.s3Key) remoteKeys.add(r.s3Key);
+			const fromUrl = s3ObjectKeyFromImageUrl(r.imageDataUrl);
+			if (fromUrl) remoteKeys.add(fromUrl);
+		}
+		const extra = localList.filter((c) => {
+			if (c.imageDataUrl.startsWith('data:')) return true;
+			const k = c.s3Key ?? s3ObjectKeyFromImageUrl(c.imageDataUrl);
+			if (k && remoteKeys.has(k)) return false;
+			return true;
+		});
+		const merged = [...remoteList, ...extra];
+		merged.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+		return merged;
+	}
+
+	let displayItems = $derived.by(() => {
+		if (status === 'error') return $creations;
+		if (status === 'loading') return [];
+		return mergeGallery(remote, $creations);
+	});
+
+	async function loadRemote() {
+		status = 'loading';
+		try {
+			remote = await fetchPhotoGalleryFromApi();
+			status = 'ok';
+		} catch {
+			status = 'error';
+			remote = [];
+		}
+	}
+
+	onMount(() => {
+		void loadRemote();
+	});
 
 	function formatDate(iso: string) {
 		try {
@@ -33,6 +92,22 @@
 			toast.error('No se pudo abrir en el editor');
 		}
 	}
+
+	async function removeCreation(c: Creation, e: MouseEvent) {
+		e.stopPropagation();
+		e.preventDefault();
+		try {
+			if (c.s3Key) {
+				await deletePhotoOnApi(c.s3Key);
+				await loadRemote();
+			} else {
+				creations.remove(c.id);
+			}
+			if (preview?.id === c.id) preview = null;
+		} catch {
+			toast.error('No se pudo eliminar');
+		}
+	}
 </script>
 
 <svelte:window onkeydown={previewKeydown} />
@@ -45,13 +120,24 @@
 	<div class="border-b border-white/[0.06] px-4 py-3 sm:px-6 sm:py-4">
 		<h2 class="text-lg font-semibold text-white">Mis creaciones</h2>
 		<p class="mt-1 text-[13px] text-zinc-500">
-			Se guardan en este dispositivo (navegador). Usa “Guardar” en el editor para añadir una vista
-			previa.
+			{#if status === 'ok'}
+				Listado desde la nube; las miniaturas solo en este dispositivo se muestran junto a ellas.
+			{:else if status === 'error'}
+				No se pudo listar el bucket; mostrando solo lo guardado en este dispositivo.
+			{:else}
+				Cargando galería…
+			{/if}
 		</p>
 	</div>
 
 	<div class="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-		{#if $creations.length === 0}
+		{#if status === 'loading'}
+			<div
+				class="flex flex-col items-center justify-center gap-3 rounded-xl border border-white/[0.06] bg-[#1a1a1a]/50 py-20 text-center"
+			>
+				<p class="text-[15px] text-zinc-400">Cargando fotos…</p>
+			</div>
+		{:else if displayItems.length === 0}
 			<div
 				class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/10 bg-[#1a1a1a]/50 py-20 text-center"
 			>
@@ -65,7 +151,7 @@
 			<div
 				class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 min-[640px]:gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
 			>
-				{#each $creations as c (c.id)}
+				{#each displayItems as c (c.id)}
 					<article
 						class="group relative overflow-hidden rounded-xl border border-white/[0.08] bg-[#1a1a1a] shadow-sm transition hover:border-white/15"
 					>
@@ -108,11 +194,7 @@
 								class="rounded-lg bg-black/60 p-1.5 text-zinc-300 backdrop-blur-sm transition hover:bg-red-500/80 hover:text-white"
 								aria-label="Eliminar creación"
 								title="Eliminar"
-								onclick={(e) => {
-									e.stopPropagation();
-									creations.remove(c.id);
-									if (preview?.id === c.id) preview = null;
-								}}
+								onclick={(e) => void removeCreation(c, e)}
 							>
 								<Trash2 class="size-4" strokeWidth={2} />
 							</button>

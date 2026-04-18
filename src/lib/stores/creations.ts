@@ -31,6 +31,8 @@ export type Creation = {
 	imageDataUrl: string;
 	/** SHA-256 del PNG (hex); ausente en datos guardados antes de esta versión */
 	contentHash?: string;
+	/** Clave S3 (p. ej. `photos/uuid.png`) cuando viene del listado remoto */
+	s3Key?: string;
 };
 
 function loadFromStorage(): Creation[] {

@@ -4,6 +4,16 @@ use tauri::Emitter;
 use tauri::Manager;
 
 #[cfg(target_os = "macos")]
+mod macos_dock;
+
+fn emit_new_project_request(app: &tauri::AppHandle) {
+  let _ = app.emit("new-project-request", ());
+  if let Some(w) = app.get_webview_window("main") {
+    let _ = w.set_focus();
+  }
+}
+
+#[cfg(target_os = "macos")]
 fn run_interactive_screencapture_to_clipboard() -> std::io::Result<std::process::ExitStatus> {
   std::process::Command::new("/usr/sbin/screencapture")
     .args(["-i", "-c"])
@@ -69,10 +79,41 @@ fn spawn_snap_select(app: tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
-    .plugin(tauri_plugin_dialog::init())
-    .plugin(tauri_plugin_fs::init())
-    .plugin(tauri_plugin_clipboard_manager::init())
+  let builder = {
+    let b = tauri::Builder::default()
+      .plugin(tauri_plugin_dialog::init())
+      .plugin(tauri_plugin_fs::init())
+      .plugin(tauri_plugin_clipboard_manager::init());
+    #[cfg(desktop)]
+    {
+      b.menu(|app| {
+        use tauri::menu::{Menu, MenuItem, Submenu};
+        Menu::with_items(app, &[&Submenu::with_items(
+          app,
+          "Archivo",
+          true,
+          &[&MenuItem::with_id(
+            app,
+            "new_project",
+            "Nuevo proyecto",
+            true,
+            None::<&str>,
+          )?],
+        )?])
+      })
+      .on_menu_event(|app, event| {
+        if event.id() == "new_project" {
+          emit_new_project_request(app);
+        }
+      })
+    }
+    #[cfg(not(desktop))]
+    {
+      b
+    }
+  };
+
+  builder
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -85,6 +126,13 @@ pub fn run() {
       let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray_menubar.png"))?;
       let show_i =
         tauri::menu::MenuItem::with_id(app, "show", "Mostrar GlowShot", true, None::<&str>)?;
+      let new_project_i = tauri::menu::MenuItem::with_id(
+        app,
+        "new_project",
+        "Nuevo proyecto",
+        true,
+        None::<&str>,
+      )?;
       let snap_i = tauri::menu::MenuItem::with_id(
         app,
         "snap_select",
@@ -93,7 +141,10 @@ pub fn run() {
         None::<&str>,
       )?;
       let quit_i = tauri::menu::MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
-      let menu = tauri::menu::Menu::with_items(app, &[&show_i, &snap_i, &quit_i])?;
+      let menu = tauri::menu::Menu::with_items(
+        app,
+        &[&show_i, &new_project_i, &snap_i, &quit_i],
+      )?;
 
       let _tray = tauri::tray::TrayIconBuilder::new()
         .icon(tray_icon)
@@ -112,12 +163,22 @@ pub fn run() {
               let _ = w.set_focus();
             }
           }
+          "new_project" => {
+            emit_new_project_request(app);
+          }
           "snap_select" => {
             spawn_snap_select(app.clone());
           }
           _ => {}
         })
         .build(app)?;
+
+      #[cfg(target_os = "macos")]
+      {
+        if let Err(e) = macos_dock::install(&app.handle()) {
+          log::warn!("dock menu: {e}");
+        }
+      }
 
       Ok(())
     })

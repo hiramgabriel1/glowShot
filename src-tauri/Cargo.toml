@@ -34,3 +34,15 @@ tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-clipboard-manager = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6.2", default-features = false, features = ["std"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+  "NSApplication",
+  "NSMenu",
+  "NSMenuItem",
+] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+  "NSObject",
+  "NSString",
+] }

@@ -33,6 +33,36 @@ export const rightSidebarExpanded = writable(true);
 /** Left tools panel: expanded vs slim rail */
 export const leftSidebarExpanded = writable(true);
 
+/**
+ * Se incrementa en cada «nuevo proyecto» para que el lienzo resetee pan/herramientas locales.
+ */
+export const newProjectGeneration = writable(0);
+
+/** Restablece el editor a valores por defecto (no borra Mis creaciones). */
+export function startNewProject(): void {
+	activeTool.set('canvas');
+	frameWidth.set(1200);
+	frameHeight.set(675);
+	aspectRatio.set('16:9');
+	padding.set(64);
+	mockupEnabled.set(true);
+	importedImageDataUrl.set(null);
+	mockupPlatform.set('macos');
+	mockupTheme.set('dark');
+	mockupBorderRadius.set(12);
+	backgroundEnabled.set(true);
+	backgroundTab.set('gradient');
+	gradientIndex.set(0);
+	outerRadius.set(24);
+	shadowEnabled.set(true);
+	shadowIntensity.set(52);
+	zoom.set(85);
+	leftSidebarExpanded.set(true);
+	rightSidebarExpanded.set(true);
+	topTab.set('editor');
+	newProjectGeneration.update((n) => n + 1);
+}
+
 /** Preset gradients (12 + selection matches reference UI) */
 export const GRADIENT_PRESETS = [
 	'linear-gradient(135deg, #a8d8ff 0%, #c9b4ff 45%, #ffb8d8 100%)',

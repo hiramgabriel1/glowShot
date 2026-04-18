@@ -4,6 +4,7 @@
 	import '../app.css';
 	import ToastRegion from '$lib/components/ToastRegion.svelte';
 	import { importedImageDataUrl, mockupEnabled, topTab } from '$lib/stores/editor';
+	import { runNewProjectFlow } from '$lib/snapforge/new-project-flow';
 	import { toast } from '$lib/stores/toast';
 
 	let { children } = $props();
@@ -30,6 +31,9 @@
 					toast.info(
 						'Selección de captura solo está disponible en macOS (app de escritorio).'
 					);
+				}),
+				listen('new-project-request', () => {
+					runNewProjectFlow();
 				})
 			]);
 		})();

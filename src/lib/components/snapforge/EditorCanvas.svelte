@@ -22,6 +22,7 @@
 		padding,
 		shadowEnabled,
 		shadowIntensity,
+		newProjectGeneration,
 		zoom
 	} from '$lib/stores/editor';
 
@@ -133,6 +134,16 @@
 	let startOverOpen = $state(false);
 	let importInputEl = $state<HTMLInputElement | undefined>();
 	let emptyDropActive = $state(false);
+
+	$effect(() => {
+		$newProjectGeneration;
+		panX = 0;
+		panY = 0;
+		handToolActive = false;
+		panDragging = false;
+		panRef = null;
+		startOverOpen = false;
+	});
 
 	async function applyImageFile(file: File) {
 		try {

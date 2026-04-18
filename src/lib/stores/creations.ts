@@ -12,7 +12,7 @@ import {
 	importedImageDataUrl,
 	mockupEnabled,
 	newProjectGeneration,
-	orientationPresetIndex,
+	applyOrientationPreset,
 	padding,
 	shadowEnabled,
 	topTab
@@ -197,7 +197,7 @@ export async function openCreationInEditor(creation: Creation): Promise<void> {
 	backgroundEnabled.set(false);
 	padding.set(0);
 	shadowEnabled.set(false);
-	orientationPresetIndex.set(0);
+	applyOrientationPreset(0);
 
 	importedImageDataUrl.set(creation.imageDataUrl);
 	mockupEnabled.set(false);

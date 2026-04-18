@@ -8,10 +8,7 @@
 	import { tryUploadImportedPhotoFile } from '$lib/snapforge/upload-creation-s3';
 	import { readImageFileAsDataUrl } from '$lib/utils/read-image-file';
 	import DashboardMockup from './DashboardMockup.svelte';
-	import {
-		ORIENTATION_PRESETS,
-		orientationCssTransform
-	} from '$lib/snapforge/orientation-presets';
+	import { orientationCssTransform } from '$lib/snapforge/orientation-presets';
 	import {
 		backgroundEnabled,
 		GRADIENT_PRESETS,
@@ -24,7 +21,9 @@
 		mockupEnabled,
 		mockupPlatform,
 		mockupTheme,
-		orientationPresetIndex,
+		orientationRx,
+		orientationRy,
+		orientationRz,
 		outerRadius,
 		padding,
 		shadowEnabled,
@@ -82,19 +81,25 @@
 		return `0 ${s * 0.35}px ${s}px rgba(0,0,0,0.55), 0 ${s * 0.15}px ${s * 0.5}px rgba(0,0,0,0.35)`;
 	});
 
-	const orientationTransform = $derived.by(() => {
-		const i = Math.min(
-			Math.max(0, $orientationPresetIndex),
-			ORIENTATION_PRESETS.length - 1
-		);
-		return orientationCssTransform(ORIENTATION_PRESETS[i]);
-	});
+	const orientationTransform = $derived.by(() =>
+		orientationCssTransform({
+			id: 'custom',
+			label: '',
+			rx: $orientationRx,
+			ry: $orientationRy,
+			rz: $orientationRz
+		})
+	);
 
-	/** Nodo raíz del marco con zoom + vista 3D (export / copiar / Mis creaciones). */
-	let frameCaptureRoot = $state<HTMLElement | undefined>();
+	/**
+	 * Nodo del marco con fondo, padding y sombra (sin el wrapper 3D/zoom).
+	 * html-to-image rasteriza mal si se captura el div con transform; así «Mis creaciones»
+	 * incluye el degradado y el estilo del marco.
+	 */
+	let frameExportEl = $state<HTMLElement | undefined>();
 
 	$effect(() => {
-		setSnapforgeExportFrame(frameCaptureRoot ?? null);
+		setSnapforgeExportFrame(frameExportEl ?? null);
 		return () => setSnapforgeExportFrame(null);
 	});
 
@@ -108,8 +113,8 @@
 
 	async function runNewProjectAfterConfirm() {
 		try {
-			if (frameCaptureRoot) {
-				const result = await saveFrameToCreations(frameCaptureRoot);
+			if (frameExportEl) {
+				const result = await saveFrameToCreations(frameExportEl);
 				startNewProjectEmptyImport();
 				if (result === 'added') {
 					toast.success('Guardado en Mis creaciones. Marco vacío: importa una foto.');
@@ -251,14 +256,14 @@
 	}
 
 	async function startOverWithSave() {
-		if (!frameCaptureRoot) {
+		if (!frameExportEl) {
 			closeStartOver();
 			clearFrameToEmpty();
 			toast.info('Marco vaciado');
 			return;
 		}
 		try {
-			const result = await saveFrameToCreations(frameCaptureRoot);
+			const result = await saveFrameToCreations(frameExportEl);
 			closeStartOver();
 			clearFrameToEmpty();
 			if (result === 'added') {
@@ -334,11 +339,11 @@
 					style="perspective: 1400px; perspective-origin: 50% 50%;"
 				>
 					<div
-						bind:this={frameCaptureRoot}
 						class="origin-center will-change-transform [transform-style:preserve-3d] transition-[transform] duration-300 ease-out pointer-events-auto"
 						style="transform: {orientationTransform} scale({$zoom / 100});"
 					>
 					<div
+						bind:this={frameExportEl}
 						class="relative flex min-h-0 w-full items-center justify-center {$importedFromGallerySnapshot
 							? 'border border-white/[0.12] ring-1 ring-white/[0.06]'
 							: 'border border-blue-500/45 shadow-2xl ring-1 ring-blue-400/20'}"

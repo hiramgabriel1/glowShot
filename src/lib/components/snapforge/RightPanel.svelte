@@ -9,6 +9,8 @@
 		backgroundTab,
 		frameHeight,
 		frameWidth,
+		applyOrientationPreset,
+		clearOrientationPresetSelection,
 		gradientIndex,
 		importedFromGallerySnapshot,
 		importedImageDataUrl,
@@ -17,6 +19,9 @@
 		mockupPlatform,
 		mockupTheme,
 		orientationPresetIndex,
+		orientationRx,
+		orientationRy,
+		orientationRz,
 		outerRadius,
 		padding,
 		rightSidebarExpanded,
@@ -114,7 +119,7 @@
 					i
 						? 'border-white/25 bg-[#222] ring-1 ring-white/15'
 						: 'border-white/[0.08] bg-[#1a1a1a] hover:border-white/15'}"
-					onclick={() => orientationPresetIndex.set(i)}
+					onclick={() => applyOrientationPreset(i)}
 				>
 					<div
 						class="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-gradient-to-br from-orange-500/90 via-rose-500/25 to-purple-900/95"
@@ -124,14 +129,86 @@
 							style="perspective: 80px; perspective-origin: 50% 50%;"
 						>
 							<div
-								class="h-[44%] w-[60%] rounded-md bg-[#111] shadow-xl ring-1 ring-white/15"
+								class="h-[44%] w-[60%] overflow-hidden rounded-md bg-[#111] shadow-xl ring-1 ring-white/15"
 								style="transform: rotateX({p.rx * 0.42}deg) rotateY({p.ry * 0.42}deg) rotateZ({p.rz * 0.42}deg); transform-style: preserve-3d;"
-							></div>
+							>
+								{#if $importedImageDataUrl}
+									<img
+										src={$importedImageDataUrl}
+										alt=""
+										class="h-full w-full object-cover select-none"
+										draggable="false"
+									/>
+								{/if}
+							</div>
 						</div>
 					</div>
 					<span class="truncate px-0.5 text-[11px] font-medium text-zinc-300">{p.label}</span>
 				</button>
 			{/each}
+		</div>
+
+		<p class="mb-2 mt-4 text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+			Ajuste fino (°)
+		</p>
+		<div class="space-y-3">
+			<div class="flex items-center gap-2">
+				<span class="w-9 shrink-0 text-[11px] text-zinc-500">X</span>
+				<input
+					type="range"
+					class="sf-range min-w-0 flex-1"
+					min="-45"
+					max="45"
+					step="1"
+					value={$orientationRx}
+					aria-label="Rotación eje X"
+					oninput={(e) => {
+						clearOrientationPresetSelection();
+						orientationRx.set(Number(e.currentTarget.value));
+					}}
+				/>
+				<span class="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-zinc-400"
+					>{$orientationRx}°</span
+				>
+			</div>
+			<div class="flex items-center gap-2">
+				<span class="w-9 shrink-0 text-[11px] text-zinc-500">Y</span>
+				<input
+					type="range"
+					class="sf-range min-w-0 flex-1"
+					min="-45"
+					max="45"
+					step="1"
+					value={$orientationRy}
+					aria-label="Rotación eje Y"
+					oninput={(e) => {
+						clearOrientationPresetSelection();
+						orientationRy.set(Number(e.currentTarget.value));
+					}}
+				/>
+				<span class="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-zinc-400"
+					>{$orientationRy}°</span
+				>
+			</div>
+			<div class="flex items-center gap-2">
+				<span class="w-9 shrink-0 text-[11px] text-zinc-500">Z</span>
+				<input
+					type="range"
+					class="sf-range min-w-0 flex-1"
+					min="-45"
+					max="45"
+					step="1"
+					value={$orientationRz}
+					aria-label="Rotación eje Z"
+					oninput={(e) => {
+						clearOrientationPresetSelection();
+						orientationRz.set(Number(e.currentTarget.value));
+					}}
+				/>
+				<span class="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-zinc-400"
+					>{$orientationRz}°</span
+				>
+			</div>
 		</div>
 	</section>
 

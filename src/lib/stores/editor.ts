@@ -1,5 +1,7 @@
 import { writable } from 'svelte/store';
 
+import { ORIENTATION_PRESETS } from '$lib/snapforge/orientation-presets';
+
 export type AspectKey = 'auto' | '16:9' | '4:3' | '1:1';
 export type BgTab = 'solid' | 'gradient' | 'image' | 'blur';
 export type MockupPlatform = 'none' | 'macos' | 'windows';
@@ -32,8 +34,30 @@ export const shadowEnabled = writable(true);
 export const shadowIntensity = writable(52);
 export const zoom = writable(85);
 
-/** Índice en ORIENTATION_PRESETS: vista 3D del marco (shots.so). */
+/**
+ * Índice en ORIENTATION_PRESETS; -1 = posición ajustada a mano con los deslizadores.
+ */
 export const orientationPresetIndex = writable(0);
+
+/** Rotación 3D del marco en grados (fuente de verdad para el lienzo). */
+export const orientationRx = writable(0);
+export const orientationRy = writable(0);
+export const orientationRz = writable(0);
+
+/** Aplica un preset y sincroniza los tres ejes. */
+export function applyOrientationPreset(index: number): void {
+	const i = Math.max(0, Math.min(index, ORIENTATION_PRESETS.length - 1));
+	const p = ORIENTATION_PRESETS[i]!;
+	orientationPresetIndex.set(i);
+	orientationRx.set(p.rx);
+	orientationRy.set(p.ry);
+	orientationRz.set(p.rz);
+}
+
+/** Marca vista como personalizada (p. ej. al mover un deslizador). */
+export function clearOrientationPresetSelection(): void {
+	orientationPresetIndex.set(-1);
+}
 
 /** Right properties panel: expanded vs slim rail */
 export const rightSidebarExpanded = writable(true);
@@ -70,7 +94,7 @@ function resetEditorBaseline(opts: { mockup: boolean }): void {
 	shadowEnabled.set(true);
 	shadowIntensity.set(52);
 	zoom.set(85);
-	orientationPresetIndex.set(0);
+	applyOrientationPreset(0);
 	leftSidebarExpanded.set(true);
 	rightSidebarExpanded.set(true);
 	topTab.set('editor');

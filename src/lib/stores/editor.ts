@@ -5,7 +5,9 @@ export type BgTab = 'solid' | 'gradient' | 'image' | 'blur';
 export type MockupPlatform = 'none' | 'macos' | 'windows';
 
 export const activeTool = writable('canvas');
-export const topTab = writable<'editor' | 'templates' | 'creations'>('editor');
+export const topTab = writable<
+	'editor' | 'templates' | 'creations' | 'shareTemplates'
+>('editor');
 export const frameWidth = writable(1200);
 export const frameHeight = writable(675);
 export const aspectRatio = writable<AspectKey>('16:9');

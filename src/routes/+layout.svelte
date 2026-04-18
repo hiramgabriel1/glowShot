@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import ToastRegion from '$lib/components/ToastRegion.svelte';
 	import { importedImageDataUrl, mockupEnabled, topTab } from '$lib/stores/editor';
 	import { toast } from '$lib/stores/toast';
@@ -42,7 +41,8 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<title>GlowShot</title>
+	<link rel="icon" href="/icono.png" type="image/png" />
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 	<link

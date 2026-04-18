@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "SnapForge",
+  "productName": "GlowShot",
+  "mainBinaryName": "GlowShot",
   "version": "0.1.0",
   "identifier": "com.glowshot.app",
   "build": {
@@ -13,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "SnapForge",
+        "title": "GlowShot",
         "width": 800,
         "height": 600,
         "resizable": true,
@@ -33,6 +34,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "macOS": {
+      "bundleName": "GlowShot",
+      "infoPlist": "Info.plist"
+    }
   }
 }

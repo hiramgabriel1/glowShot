@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*
 
 # Tauri
 src-tauri/target
+
+# Local tool venvs (e.g. one-off icon processing)
+.venv-logo

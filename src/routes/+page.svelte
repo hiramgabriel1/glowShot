@@ -6,6 +6,7 @@
 	import EditorCanvas from '$lib/components/snapforge/EditorCanvas.svelte';
 	import LeftTools from '$lib/components/snapforge/LeftTools.svelte';
 	import RightPanel from '$lib/components/snapforge/RightPanel.svelte';
+	import ShareTemplatesPanel from '$lib/components/snapforge/ShareTemplatesPanel.svelte';
 	import TemplatesPlaceholder from '$lib/components/snapforge/TemplatesPlaceholder.svelte';
 	import {
 		leftSidebarExpanded,
@@ -37,6 +38,8 @@
 			<RightPanel />
 		{:else if $topTab === 'creations'}
 			<CreationsGallery />
+		{:else if $topTab === 'shareTemplates'}
+			<ShareTemplatesPanel />
 		{:else}
 			<TemplatesPlaceholder />
 		{/if}

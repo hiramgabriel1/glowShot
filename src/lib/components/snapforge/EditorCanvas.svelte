@@ -1,0 +1,481 @@
+<script lang="ts">
+	import { get } from 'svelte/store';
+	import { Hand, Home, ImagePlus, Minus, Plus, RotateCcw, Upload } from 'lucide-svelte';
+	import { setSnapforgeExportFrame } from '$lib/snapforge/clipboard-bridge';
+	import { saveFrameToCreations } from '$lib/stores/creations';
+	import { toast } from '$lib/stores/toast';
+	import { errorMessage } from '$lib/utils/error-message';
+	import { readImageFileAsDataUrl } from '$lib/utils/read-image-file';
+	import DashboardMockup from './DashboardMockup.svelte';
+	import {
+		backgroundEnabled,
+		GRADIENT_PRESETS,
+		gradientIndex,
+		frameHeight,
+		frameWidth,
+		importedImageDataUrl,
+		mockupBorderRadius,
+		mockupEnabled,
+		mockupPlatform,
+		mockupTheme,
+		outerRadius,
+		padding,
+		shadowEnabled,
+		shadowIntensity,
+		zoom
+	} from '$lib/stores/editor';
+
+	const ZOOM_MIN = 25;
+	const ZOOM_MAX = 150;
+
+	function clampZoom(n: number): number {
+		return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(n)));
+	}
+
+	function zoomIn() {
+		zoom.update((z) => clampZoom(z + 5));
+	}
+	function zoomOut() {
+		zoom.update((z) => clampZoom(z - 5));
+	}
+
+	let zoomDraft = $state(String(get(zoom)));
+	let zoomFocused = $state(false);
+
+	$effect(() => {
+		const z = $zoom;
+		if (!zoomFocused) zoomDraft = String(z);
+	});
+
+	function commitZoomInput() {
+		const raw = zoomDraft.replace(/[^\d]/g, '');
+		const n = parseInt(raw, 10);
+		if (raw !== '' && Number.isFinite(n)) {
+			zoom.set(clampZoom(n));
+		}
+		zoomDraft = String(get(zoom));
+		zoomFocused = false;
+	}
+
+	function onZoomFocus(ev: FocusEvent & { currentTarget: HTMLInputElement }) {
+		zoomFocused = true;
+		requestAnimationFrame(() => ev.currentTarget.select());
+	}
+
+	const bgStyle = $derived(
+		$backgroundEnabled ? GRADIENT_PRESETS[$gradientIndex] ?? GRADIENT_PRESETS[0] : '#2a2a2a'
+	);
+
+	const frameShadow = $derived.by(() => {
+		if (!$shadowEnabled) return 'none';
+		const s = ($shadowIntensity / 100) * 48;
+		return `0 ${s * 0.35}px ${s}px rgba(0,0,0,0.55), 0 ${s * 0.15}px ${s * 0.5}px rgba(0,0,0,0.35)`;
+	});
+
+	let frameEl = $state<HTMLElement | undefined>();
+
+	$effect(() => {
+		setSnapforgeExportFrame(frameEl ?? null);
+		return () => setSnapforgeExportFrame(null);
+	});
+
+	/** Solo con la herramienta «mano» activa se puede arrastrar el fondo. */
+	let handToolActive = $state(false);
+
+	/** Pan en píxeles de pantalla (área vacía detrás del marco). */
+	let panX = $state(0);
+	let panY = $state(0);
+	let panDragging = $state(false);
+	let panRef = $state<{ x: number; y: number; px: number; py: number } | null>(null);
+
+	$effect(() => {
+		if (!handToolActive) {
+			panDragging = false;
+			panRef = null;
+		}
+	});
+
+	function onPanDown(e: PointerEvent) {
+		if (!handToolActive) return;
+		if (e.button !== 0) return;
+		e.preventDefault();
+		panDragging = true;
+		panRef = { x: e.clientX, y: e.clientY, px: panX, py: panY };
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+	}
+
+	function onPanMove(e: PointerEvent) {
+		if (!panDragging || !panRef) return;
+		panX = panRef.px + (e.clientX - panRef.x);
+		panY = panRef.py + (e.clientY - panRef.y);
+	}
+
+	function onPanUp(e: PointerEvent) {
+		if (!panDragging) return;
+		panDragging = false;
+		panRef = null;
+		try {
+			(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+		} catch {
+			/* noop */
+		}
+	}
+
+	function resetPan() {
+		panX = 0;
+		panY = 0;
+	}
+
+	function toggleHandTool() {
+		handToolActive = !handToolActive;
+	}
+
+	let startOverOpen = $state(false);
+	let importInputEl = $state<HTMLInputElement | undefined>();
+	let emptyDropActive = $state(false);
+
+	async function applyImageFile(file: File) {
+		try {
+			const url = await readImageFileAsDataUrl(file);
+			importedImageDataUrl.set(url);
+			mockupEnabled.set(false);
+			toast.success('Imagen añadida al marco');
+		} catch (err) {
+			toast.error(errorMessage(err) || 'No se pudo cargar la imagen');
+		}
+	}
+
+	function onImportInput(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const f = input.files?.[0];
+		input.value = '';
+		if (f) void applyImageFile(f);
+	}
+
+	function onFrameDragOver(e: DragEvent) {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+		if (!get(importedImageDataUrl) && !get(mockupEnabled)) emptyDropActive = true;
+	}
+
+	function onFrameDragLeave(e: DragEvent) {
+		const el = e.currentTarget as HTMLElement;
+		if (!el.contains(e.relatedTarget as Node | null)) emptyDropActive = false;
+	}
+
+	async function onFrameDrop(e: DragEvent) {
+		e.preventDefault();
+		emptyDropActive = false;
+		const f = e.dataTransfer?.files?.[0];
+		if (f) await applyImageFile(f);
+	}
+
+	function clearFrameToEmpty() {
+		importedImageDataUrl.set(null);
+		mockupEnabled.set(false);
+		panX = 0;
+		panY = 0;
+		handToolActive = false;
+	}
+
+	function openStartOver() {
+		startOverOpen = true;
+	}
+
+	function closeStartOver() {
+		startOverOpen = false;
+	}
+
+	async function startOverWithSave() {
+		if (!frameEl) {
+			closeStartOver();
+			clearFrameToEmpty();
+			toast.info('Marco vaciado');
+			return;
+		}
+		try {
+			const result = await saveFrameToCreations(frameEl);
+			closeStartOver();
+			clearFrameToEmpty();
+			if (result === 'added') {
+				toast.success('Guardado en Mis creaciones. Marco vaciado.');
+			} else {
+				toast.info('Ya estaba en Mis creaciones. Marco vaciado.');
+			}
+		} catch (err) {
+			console.error(err);
+			toast.error(errorMessage(err) || 'No se pudo guardar');
+			closeStartOver();
+		}
+	}
+
+	function startOverWithoutSave() {
+		closeStartOver();
+		clearFrameToEmpty();
+		toast.info('Marco vaciado');
+	}
+
+	function triggerImport() {
+		importInputEl?.click();
+	}
+</script>
+
+<svelte:window
+	onkeydown={(e) => {
+		if (e.key === 'Escape' && startOverOpen) {
+			closeStartOver();
+			return;
+		}
+		if (e.key === 'Escape' && handToolActive) {
+			handToolActive = false;
+		}
+	}}
+/>
+
+<div class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#141414]">
+	<!-- Dot grid -->
+	<div
+		class="pointer-events-none absolute inset-0 opacity-90"
+		style="background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px); background-size: 18px 18px;"
+	></div>
+
+	<div class="relative min-h-0 flex-1 overflow-hidden pb-20">
+		<div
+			class="absolute inset-0 z-[5] touch-none select-none"
+			class:pointer-events-none={!handToolActive}
+			class:cursor-grab={handToolActive && !panDragging}
+			class:cursor-grabbing={handToolActive && panDragging}
+			onpointerdown={onPanDown}
+			onpointermove={onPanMove}
+			onpointerup={onPanUp}
+			onpointercancel={onPanUp}
+			role="presentation"
+			aria-hidden="true"
+		></div>
+
+		<div
+			class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-8"
+		>
+			<div
+				class="pointer-events-none will-change-transform"
+				class:transition-transform={!panDragging}
+				class:duration-150={!panDragging}
+				class:ease-out={!panDragging}
+				style="transform: translate({panX}px, {panY}px);"
+			>
+				<div
+					class="origin-center transition-transform duration-150 ease-out will-change-transform"
+					style="transform: scale({$zoom / 100});"
+				>
+					<div
+						bind:this={frameEl}
+						class="relative flex min-h-0 w-full items-center justify-center border border-blue-500/45 shadow-2xl ring-1 ring-blue-400/20 pointer-events-auto"
+						style:width="{$frameWidth}px"
+						style:height="{$frameHeight}px"
+						style:border-radius="{$outerRadius}px"
+						style:padding="{$padding}px"
+						style:background={bgStyle}
+						style:box-shadow={frameShadow}
+					>
+						<div
+							class="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center overflow-hidden"
+							ondragover={onFrameDragOver}
+							ondragleave={onFrameDragLeave}
+							ondrop={onFrameDrop}
+							role="presentation"
+						>
+							{#if $importedImageDataUrl}
+								<div class="flex h-full min-h-0 w-full items-center justify-center">
+									<img
+										src={$importedImageDataUrl}
+										class="max-h-full max-w-full object-contain select-none"
+										alt=""
+										draggable="false"
+									/>
+								</div>
+							{:else if $mockupEnabled}
+								<div class="flex h-full min-h-0 w-full items-center justify-center overflow-hidden">
+									<div class="w-full max-w-[min(100%,420px)] shrink-0">
+										<DashboardMockup
+											borderRadius={$mockupBorderRadius}
+											theme={$mockupTheme}
+											platform={$mockupPlatform}
+										/>
+									</div>
+								</div>
+							{:else}
+								<div
+									class="flex min-h-[240px] w-full max-w-md flex-1 flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-8 text-center transition {emptyDropActive
+										? 'border-sky-400/55 bg-sky-500/10'
+										: 'border-white/12 bg-black/25'}"
+									role="region"
+									aria-label="Marco vacío"
+								>
+									<ImagePlus class="size-10 shrink-0 text-zinc-500" strokeWidth={1.5} />
+									<div>
+										<p class="text-[14px] font-medium text-zinc-300">Marco vacío</p>
+										<p class="mt-1 text-[12px] text-zinc-500">
+											Arrastra una imagen o usa Importar
+										</p>
+									</div>
+									<button
+										type="button"
+										class="rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-zinc-200 transition hover:bg-white/10"
+										onclick={triggerImport}
+									>
+										Importar imagen
+									</button>
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Zoom bar -->
+	<div
+		class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/[0.08] bg-[#1f1f1f]/95 px-2 py-1.5 shadow-lg backdrop-blur-sm"
+	>
+		<button
+			type="button"
+			class="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+			aria-label="Zoom out"
+			onclick={zoomOut}
+		>
+			<Minus class="size-4" strokeWidth={2} />
+		</button>
+		<div class="flex items-center gap-0.5 px-0.5">
+			<input
+				type="text"
+				inputmode="numeric"
+				autocomplete="off"
+				spellcheck="false"
+				aria-label="Zoom porcentaje"
+				title="Escribe un valor entre {ZOOM_MIN} y {ZOOM_MAX}"
+				class="min-w-[2.25rem] max-w-[4rem] cursor-text rounded px-1.5 py-0.5 text-center font-mono text-[12px] font-medium tabular-nums text-zinc-200 outline-none transition placeholder:text-zinc-500 {zoomFocused
+					? 'bg-sky-500/25 ring-1 ring-sky-400/45'
+					: 'bg-transparent hover:bg-white/[0.06]'}"
+				bind:value={zoomDraft}
+				onfocus={onZoomFocus}
+				onblur={commitZoomInput}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') e.currentTarget.blur();
+					if (e.key === 'Escape') {
+						zoomDraft = String(get(zoom));
+						e.currentTarget.blur();
+					}
+				}}
+			/>
+			<span class="select-none text-[12px] font-medium text-zinc-400">%</span>
+		</div>
+		<button
+			type="button"
+			class="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+			aria-label="Zoom in"
+			onclick={zoomIn}
+		>
+			<Plus class="size-4" strokeWidth={2} />
+		</button>
+		<span class="mx-1 h-4 w-px bg-white/10"></span>
+		<button
+			type="button"
+			class="rounded-md p-1.5 transition {handToolActive
+				? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-400/35'
+				: 'text-zinc-400 hover:bg-white/10 hover:text-white'}"
+			aria-label="Herramienta mano: arrastrar el lienzo por el fondo"
+			aria-pressed={handToolActive}
+			title="Mover el lienzo: arrastra el fondo oscuro (Esc para salir)"
+			onclick={toggleHandTool}
+		>
+			<Hand class="size-4" strokeWidth={2} />
+		</button>
+		<button
+			type="button"
+			class="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+			aria-label="Volver a la posición inicial del diseño"
+			title="Centrar de nuevo el diseño en el lienzo"
+			onclick={resetPan}
+		>
+			<Home class="size-4" strokeWidth={2} />
+		</button>
+		<span class="mx-1 h-4 w-px bg-white/10"></span>
+		<button
+			type="button"
+			class="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-amber-200/90"
+			aria-label="Empezar de nuevo"
+			title="Vaciar el marco (puedes guardar antes en Mis creaciones)"
+			onclick={openStartOver}
+		>
+			<RotateCcw class="size-4" strokeWidth={2} />
+		</button>
+		<button
+			type="button"
+			class="rounded-md p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+			aria-label="Importar imagen al marco"
+			title="Importar imagen (PNG, JPG, WebP…)"
+			onclick={triggerImport}
+		>
+			<Upload class="size-4" strokeWidth={2} />
+		</button>
+		<input
+			bind:this={importInputEl}
+			type="file"
+			class="sr-only"
+			accept="image/*"
+			tabindex="-1"
+			aria-hidden="true"
+			onchange={onImportInput}
+		/>
+	</div>
+
+	{#if startOverOpen}
+		<div
+			class="fixed inset-0 z-[400] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="start-over-title"
+		>
+			<button
+				type="button"
+				class="absolute inset-0 cursor-default"
+				aria-label="Cerrar"
+				onclick={closeStartOver}
+			></button>
+			<div
+				class="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-[#1c1c1c] p-6 shadow-2xl"
+			>
+				<h2 id="start-over-title" class="text-lg font-semibold text-white">Empezar de nuevo</h2>
+				<p class="mt-2 text-[13px] leading-relaxed text-zinc-400">
+					Se vaciará el marco (imagen o mockup). ¿Quieres guardar antes una copia en Mis
+					creaciones?
+				</p>
+				<div class="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+					<button
+						type="button"
+						class="order-3 rounded-lg px-4 py-2.5 text-[13px] font-medium text-zinc-400 transition hover:bg-white/[0.06] hover:text-white sm:order-1"
+						onclick={closeStartOver}
+					>
+						Cancelar
+					</button>
+					<button
+						type="button"
+						class="order-2 rounded-lg border border-white/10 bg-white/[0.05] px-4 py-2.5 text-[13px] font-medium text-zinc-200 transition hover:bg-white/10 sm:order-2"
+						onclick={startOverWithoutSave}
+					>
+						Vaciar sin guardar
+					</button>
+					<button
+						type="button"
+						class="order-1 rounded-lg px-4 py-2.5 text-[13px] font-semibold text-[#0c0c0c] shadow-sm transition hover:brightness-105 sm:order-3"
+						style="background: linear-gradient(180deg, #8fd4f0 0%, #7ec8e3 100%);"
+						onclick={() => void startOverWithSave()}
+					>
+						Guardar y vaciar
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+</div>

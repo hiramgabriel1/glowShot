@@ -13,6 +13,7 @@
 		gradientIndex,
 		frameHeight,
 		frameWidth,
+		importedFromGallerySnapshot,
 		importedImageDataUrl,
 		mockupBorderRadius,
 		mockupEnabled,
@@ -148,6 +149,7 @@
 	async function applyImageFile(file: File) {
 		try {
 			const url = await readImageFileAsDataUrl(file);
+			importedFromGallerySnapshot.set(false);
 			importedImageDataUrl.set(url);
 			mockupEnabled.set(false);
 			toast.success('Imagen añadida al marco');
@@ -182,6 +184,7 @@
 	}
 
 	function clearFrameToEmpty() {
+		importedFromGallerySnapshot.set(false);
 		importedImageDataUrl.set(null);
 		mockupEnabled.set(false);
 		panX = 0;
@@ -280,13 +283,15 @@
 				>
 					<div
 						bind:this={frameEl}
-						class="relative flex min-h-0 w-full items-center justify-center border border-blue-500/45 shadow-2xl ring-1 ring-blue-400/20 pointer-events-auto"
+						class="relative flex min-h-0 w-full items-center justify-center pointer-events-auto {$importedFromGallerySnapshot
+							? 'border border-white/[0.12] ring-1 ring-white/[0.06]'
+							: 'border border-blue-500/45 shadow-2xl ring-1 ring-blue-400/20'}"
 						style:width="{$frameWidth}px"
 						style:height="{$frameHeight}px"
 						style:border-radius="{$outerRadius}px"
 						style:padding="{$padding}px"
 						style:background={bgStyle}
-						style:box-shadow={frameShadow}
+						style:box-shadow={$importedFromGallerySnapshot ? 'none' : frameShadow}
 					>
 						<div
 							class="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col items-center justify-center overflow-hidden"
@@ -296,7 +301,11 @@
 							role="presentation"
 						>
 							{#if $importedImageDataUrl}
-								<div class="flex h-full min-h-0 w-full items-center justify-center">
+								<div
+									class="flex h-full min-h-0 w-full items-center justify-center {$importedFromGallerySnapshot
+										? 'min-h-0 overflow-hidden rounded-[inherit]'
+										: ''}"
+								>
 									<img
 										src={$importedImageDataUrl}
 										class="max-h-full max-w-full object-contain select-none"

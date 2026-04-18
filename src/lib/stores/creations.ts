@@ -1,6 +1,20 @@
 import { get, writable } from 'svelte/store';
 
 import { blobToDataUrl, captureFramePngBlob } from '$lib/export/save-frame-png';
+import {
+	activeTool,
+	aspectRatio,
+	backgroundEnabled,
+	frameHeight,
+	frameWidth,
+	importedFromGallerySnapshot,
+	importedImageDataUrl,
+	mockupEnabled,
+	newProjectGeneration,
+	padding,
+	shadowEnabled,
+	topTab
+} from '$lib/stores/editor';
 
 const STORAGE_KEY = 'snapforge-creations-v1';
 const MAX_ITEMS = 48;
@@ -114,4 +128,56 @@ export async function saveFrameToCreations(
 		contentHash
 	});
 	return 'added';
+}
+
+function loadImageDimensionsFromDataUrl(dataUrl: string): Promise<{ w: number; h: number }> {
+	return new Promise((resolve, reject) => {
+		if (typeof Image === 'undefined') {
+			reject(new Error('no Image'));
+			return;
+		}
+		const img = new Image();
+		img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+		img.onerror = () => reject(new Error('decode'));
+		img.src = dataUrl;
+	});
+}
+
+function fitFrameSizeToImage(w: number, h: number, maxSide: number): { fw: number; fh: number } {
+	if (w <= 0 || h <= 0) return { fw: 1200, fh: 675 };
+	if (w >= h) {
+		const fw = Math.min(w, maxSide);
+		const fh = Math.round((fw * h) / w);
+		return { fw, fh: Math.max(1, fh) };
+	}
+	const fh = Math.min(h, maxSide);
+	const fw = Math.round((fh * w) / h);
+	return { fw: Math.max(1, fw), fh };
+}
+
+/**
+ * Abre una creación en el editor: la imagen guardada (miniatura) pasa al marco para seguir editando.
+ * No se restaura el mockup ni capas; solo el PNG guardado.
+ */
+export async function openCreationInEditor(creation: Creation): Promise<void> {
+	try {
+		const { w, h } = await loadImageDimensionsFromDataUrl(creation.imageDataUrl);
+		const { fw, fh } = fitFrameSizeToImage(w, h, 1200);
+		frameWidth.set(fw);
+		frameHeight.set(fh);
+		aspectRatio.set('auto');
+	} catch {
+		/* se mantienen el ancho y alto actuales del editor */
+	}
+
+	importedFromGallerySnapshot.set(true);
+	backgroundEnabled.set(false);
+	padding.set(0);
+	shadowEnabled.set(false);
+
+	importedImageDataUrl.set(creation.imageDataUrl);
+	mockupEnabled.set(false);
+	activeTool.set('canvas');
+	topTab.set('editor');
+	newProjectGeneration.update((n) => n + 1);
 }

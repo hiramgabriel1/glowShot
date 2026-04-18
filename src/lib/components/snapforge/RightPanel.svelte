@@ -9,6 +9,7 @@
 		frameHeight,
 		frameWidth,
 		gradientIndex,
+		importedFromGallerySnapshot,
 		importedImageDataUrl,
 		mockupBorderRadius,
 		mockupEnabled,
@@ -109,7 +110,10 @@
 				onclick={() => {
 					mockupEnabled.update((v) => {
 						const next = !v;
-						if (next) importedImageDataUrl.set(null);
+						if (next) {
+							importedImageDataUrl.set(null);
+							importedFromGallerySnapshot.set(false);
+						}
 						return next;
 					});
 				}}

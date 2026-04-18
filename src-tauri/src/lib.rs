@@ -20,7 +20,6 @@ fn run_interactive_screencapture_to_clipboard() -> std::io::Result<std::process:
     .status()
 }
 
-/// Portapapeles (imagen RGBA) → data URL PNG para el frontend.
 fn clipboard_to_png_data_url() -> Option<String> {
   let mut cb = arboard::Clipboard::new().ok()?;
   let img = cb.get_image().ok()?;

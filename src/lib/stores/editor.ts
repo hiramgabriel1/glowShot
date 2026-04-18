@@ -16,6 +16,12 @@ export const mockupEnabled = writable(true);
 
 /** Imagen propia dentro del marco (data URL). Si existe, se muestra en lugar del mockup dashboard. */
 export const importedImageDataUrl = writable<string | null>(null);
+
+/**
+ * True cuando la imagen viene de «Mis creaciones»: el PNG ya incluye marco/degradado de la captura.
+ * El lienzo usa un solo fondo plano y sin padding extra para no duplicar capas.
+ */
+export const importedFromGallerySnapshot = writable(false);
 export const mockupPlatform = writable<MockupPlatform>('macos');
 export const mockupTheme = writable<'dark' | 'light'>('dark');
 export const mockupBorderRadius = writable(12);
@@ -47,6 +53,7 @@ export function startNewProject(): void {
 	padding.set(64);
 	mockupEnabled.set(true);
 	importedImageDataUrl.set(null);
+	importedFromGallerySnapshot.set(false);
 	mockupPlatform.set('macos');
 	mockupTheme.set('dark');
 	mockupBorderRadius.set(12);

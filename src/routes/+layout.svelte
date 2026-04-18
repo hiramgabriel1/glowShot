@@ -3,7 +3,12 @@
 	import { browser } from '$app/environment';
 	import '../app.css';
 	import ToastRegion from '$lib/components/ToastRegion.svelte';
-	import { importedImageDataUrl, mockupEnabled, topTab } from '$lib/stores/editor';
+	import {
+		importedFromGallerySnapshot,
+		importedImageDataUrl,
+		mockupEnabled,
+		topTab
+	} from '$lib/stores/editor';
 	import { runNewProjectFlow } from '$lib/snapforge/new-project-flow';
 	import { toast } from '$lib/stores/toast';
 
@@ -21,6 +26,7 @@
 				listen<{ dataUrl: string }>('snap-import', (e) => {
 					const url = e.payload?.dataUrl;
 					if (typeof url === 'string' && url.startsWith('data:image')) {
+						importedFromGallerySnapshot.set(false);
 						importedImageDataUrl.set(url);
 						mockupEnabled.set(false);
 						topTab.set('editor');

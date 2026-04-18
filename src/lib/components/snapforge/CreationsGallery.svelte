@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Trash2, X } from 'lucide-svelte';
-	import { creations } from '$lib/stores/creations';
+	import { Pencil, Trash2, X } from 'lucide-svelte';
+	import { creations, openCreationInEditor } from '$lib/stores/creations';
 	import type { Creation } from '$lib/stores/creations';
+	import { toast } from '$lib/stores/toast';
 
 	let preview = $state<Creation | null>(null);
 
@@ -19,6 +20,18 @@
 	function previewKeydown(e: KeyboardEvent) {
 		if (preview === null || e.key !== 'Escape') return;
 		preview = null;
+	}
+
+	async function editCreation(c: Creation, e: MouseEvent) {
+		e.stopPropagation();
+		e.preventDefault();
+		try {
+			await openCreationInEditor(c);
+			preview = null;
+			toast.success('Creación abierta en el editor');
+		} catch {
+			toast.error('No se pudo abrir en el editor');
+		}
 	}
 </script>
 
@@ -74,18 +87,32 @@
 								<p class="truncate text-[11px] text-zinc-500">{formatDate(c.createdAt)}</p>
 							</div>
 						</button>
-						<button
-							type="button"
-							class="absolute right-2 top-2 rounded-lg bg-black/60 p-1.5 text-zinc-300 opacity-0 backdrop-blur-sm transition hover:bg-red-500/80 hover:text-white group-hover:opacity-100"
-							aria-label="Eliminar creación"
-							onclick={(e) => {
-								e.stopPropagation();
-								creations.remove(c.id);
-								if (preview?.id === c.id) preview = null;
-							}}
+						<div
+							class="absolute right-2 top-2 flex gap-1 opacity-0 transition group-hover:opacity-100"
 						>
-							<Trash2 class="size-4" strokeWidth={2} />
-						</button>
+							<button
+								type="button"
+								class="rounded-lg bg-black/60 p-1.5 text-zinc-300 backdrop-blur-sm transition hover:bg-sky-500/85 hover:text-white"
+								aria-label="Editar en el editor"
+								title="Editar en el editor"
+								onclick={(e) => void editCreation(c, e)}
+							>
+								<Pencil class="size-4" strokeWidth={2} />
+							</button>
+							<button
+								type="button"
+								class="rounded-lg bg-black/60 p-1.5 text-zinc-300 backdrop-blur-sm transition hover:bg-red-500/80 hover:text-white"
+								aria-label="Eliminar creación"
+								title="Eliminar"
+								onclick={(e) => {
+									e.stopPropagation();
+									creations.remove(c.id);
+									if (preview?.id === c.id) preview = null;
+								}}
+							>
+								<Trash2 class="size-4" strokeWidth={2} />
+							</button>
+						</div>
 					</article>
 				{/each}
 			</div>
@@ -114,6 +141,14 @@
 					onclick={() => (preview = null)}
 				>
 					<X class="size-5" />
+				</button>
+				<button
+					type="button"
+					class="absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-lg border border-white/15 bg-sky-600/90 px-3 py-2 text-[13px] font-medium text-white shadow-lg backdrop-blur-sm transition hover:bg-sky-500"
+					onclick={(e) => preview && void editCreation(preview, e)}
+				>
+					<Pencil class="size-4 shrink-0" strokeWidth={2} />
+					Editar en el editor
 				</button>
 				<img src={preview.imageDataUrl} alt="" class="max-h-[85vh] w-auto max-w-full rounded-lg" />
 				<p class="px-2 pb-2 pt-3 text-center text-[13px] text-zinc-400">{preview.name}</p>

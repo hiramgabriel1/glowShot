@@ -1,14 +1,16 @@
-import { startNewProject } from '$lib/stores/editor';
-import { toast } from '$lib/stores/toast';
+import { tick } from 'svelte';
 
-export function runNewProjectFlow(): void {
+import { newProjectIntent, topTab } from '$lib/stores/editor';
+
+export async function runNewProjectFlow(): Promise<void> {
 	if (
 		!confirm(
-			'¿Empezar un proyecto nuevo? Se restablecerán el marco y los ajustes del editor. «Mis creaciones» no se borra.'
+			'¿Empezar un proyecto nuevo? Se guardará la vista actual en «Mis creaciones» (si no es duplicada) y el marco quedará vacío para que importes una imagen.'
 		)
 	) {
 		return;
 	}
-	startNewProject();
-	toast.success('Proyecto nuevo');
+	topTab.set('editor');
+	await tick();
+	newProjectIntent.update((n) => n + 1);
 }

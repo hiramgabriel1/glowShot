@@ -31,7 +31,7 @@
 
 <div class="flex h-screen min-h-0 flex-col overflow-hidden bg-[#121212] text-zinc-200">
 	<AppHeader />
-	<div class="flex min-h-0 min-w-0 flex-1">
+	<div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
 		{#if $topTab === 'editor'}
 			<LeftTools />
 			<EditorCanvas />

@@ -1,6 +1,7 @@
 import { get, writable } from 'svelte/store';
 
 import { blobToDataUrl, captureFramePngBlob } from '$lib/export/save-frame-png';
+import { tryUploadCreationPng } from '$lib/snapforge/upload-creation-s3';
 import {
 	activeTool,
 	aspectRatio,
@@ -11,6 +12,7 @@ import {
 	importedImageDataUrl,
 	mockupEnabled,
 	newProjectGeneration,
+	orientationPresetIndex,
 	padding,
 	shadowEnabled,
 	topTab
@@ -23,7 +25,9 @@ export type Creation = {
 	id: string;
 	name: string;
 	createdAt: string;
-	/** PNG en data URL (miniatura ~640px lado mayor) */
+	/**
+	 * Vista en miniatura: data URL local o URL `https://` en S3 tras subida.
+	 */
 	imageDataUrl: string;
 	/** SHA-256 del PNG (hex); ausente en datos guardados antes de esta versión */
 	contentHash?: string;
@@ -45,6 +49,8 @@ function loadFromStorage(): Creation[] {
 				'createdAt' in x &&
 				'imageDataUrl' in x &&
 				typeof (x as Creation).imageDataUrl === 'string' &&
+				((x as Creation).imageDataUrl.startsWith('data:') ||
+					(x as Creation).imageDataUrl.startsWith('http')) &&
 				(!('contentHash' in x) ||
 					(x as Creation).contentHash === undefined ||
 					typeof (x as Creation).contentHash === 'string')
@@ -113,12 +119,15 @@ export async function saveFrameToCreations(
 	});
 	const buf = await blob.arrayBuffer();
 	const contentHash = await sha256Hex(buf);
-	const imageDataUrl = await blobToDataUrl(new Blob([buf], { type: 'image/png' }));
+	const dataUrlLocal = await blobToDataUrl(new Blob([buf], { type: 'image/png' }));
 
 	const list = get(creations);
-	if (isDuplicateCreation(list, imageDataUrl, contentHash)) {
+	if (isDuplicateCreation(list, dataUrlLocal, contentHash)) {
 		return 'duplicate';
 	}
+
+	const remoteUrl = await tryUploadCreationPng(blob);
+	const imageDataUrl = remoteUrl ?? dataUrlLocal;
 
 	creations.add({
 		id: crypto.randomUUID(),
@@ -174,6 +183,7 @@ export async function openCreationInEditor(creation: Creation): Promise<void> {
 	backgroundEnabled.set(false);
 	padding.set(0);
 	shadowEnabled.set(false);
+	orientationPresetIndex.set(0);
 
 	importedImageDataUrl.set(creation.imageDataUrl);
 	mockupEnabled.set(false);

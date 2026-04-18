@@ -8,6 +8,10 @@
 	import { readImageFileAsDataUrl } from '$lib/utils/read-image-file';
 	import DashboardMockup from './DashboardMockup.svelte';
 	import {
+		ORIENTATION_PRESETS,
+		orientationCssTransform
+	} from '$lib/snapforge/orientation-presets';
+	import {
 		backgroundEnabled,
 		GRADIENT_PRESETS,
 		gradientIndex,
@@ -19,11 +23,14 @@
 		mockupEnabled,
 		mockupPlatform,
 		mockupTheme,
+		orientationPresetIndex,
 		outerRadius,
 		padding,
 		shadowEnabled,
 		shadowIntensity,
 		newProjectGeneration,
+		newProjectIntent,
+		startNewProjectEmptyImport,
 		zoom
 	} from '$lib/stores/editor';
 
@@ -74,12 +81,49 @@
 		return `0 ${s * 0.35}px ${s}px rgba(0,0,0,0.55), 0 ${s * 0.15}px ${s * 0.5}px rgba(0,0,0,0.35)`;
 	});
 
-	let frameEl = $state<HTMLElement | undefined>();
+	const orientationTransform = $derived.by(() => {
+		const i = Math.min(
+			Math.max(0, $orientationPresetIndex),
+			ORIENTATION_PRESETS.length - 1
+		);
+		return orientationCssTransform(ORIENTATION_PRESETS[i]);
+	});
+
+	/** Nodo raíz del marco con zoom + vista 3D (export / copiar / Mis creaciones). */
+	let frameCaptureRoot = $state<HTMLElement | undefined>();
 
 	$effect(() => {
-		setSnapforgeExportFrame(frameEl ?? null);
+		setSnapforgeExportFrame(frameCaptureRoot ?? null);
 		return () => setSnapforgeExportFrame(null);
 	});
+
+	let lastHandledNewProjectIntent = 0;
+	$effect(() => {
+		const id = $newProjectIntent;
+		if (id <= lastHandledNewProjectIntent) return;
+		lastHandledNewProjectIntent = id;
+		void runNewProjectAfterConfirm();
+	});
+
+	async function runNewProjectAfterConfirm() {
+		try {
+			if (frameCaptureRoot) {
+				const result = await saveFrameToCreations(frameCaptureRoot);
+				startNewProjectEmptyImport();
+				if (result === 'added') {
+					toast.success('Guardado en Mis creaciones. Marco vacío: importa una foto.');
+				} else {
+					toast.info('Ya estaba en Mis creaciones. Marco vacío para importar.');
+				}
+			} else {
+				startNewProjectEmptyImport();
+				toast.success('Marco vacío: importa una foto.');
+			}
+		} catch (err) {
+			console.error(err);
+			toast.error(errorMessage(err) || 'No se pudo guardar antes de empezar');
+		}
+	}
 
 	/** Solo con la herramienta «mano» activa se puede arrastrar el fondo. */
 	let handToolActive = $state(false);
@@ -201,14 +245,14 @@
 	}
 
 	async function startOverWithSave() {
-		if (!frameEl) {
+		if (!frameCaptureRoot) {
 			closeStartOver();
 			clearFrameToEmpty();
 			toast.info('Marco vaciado');
 			return;
 		}
 		try {
-			const result = await saveFrameToCreations(frameEl);
+			const result = await saveFrameToCreations(frameCaptureRoot);
 			closeStartOver();
 			clearFrameToEmpty();
 			if (result === 'added') {
@@ -246,14 +290,16 @@
 	}}
 />
 
-<div class="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[#141414]">
+<div
+	class="relative isolate z-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#141414]"
+>
 	<!-- Dot grid -->
 	<div
 		class="pointer-events-none absolute inset-0 opacity-90"
 		style="background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px); background-size: 18px 18px;"
 	></div>
 
-	<div class="relative min-h-0 flex-1 overflow-hidden pb-20">
+	<div class="relative min-h-0 min-w-0 flex-1 overflow-hidden pb-20">
 		<div
 			class="absolute inset-0 z-[5] touch-none select-none"
 			class:pointer-events-none={!handToolActive}
@@ -268,7 +314,7 @@
 		></div>
 
 		<div
-			class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-8"
+			class="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-visible p-8"
 		>
 			<div
 				class="pointer-events-none will-change-transform"
@@ -278,12 +324,16 @@
 				style="transform: translate({panX}px, {panY}px);"
 			>
 				<div
-					class="origin-center transition-transform duration-150 ease-out will-change-transform"
-					style="transform: scale({$zoom / 100});"
+					class="flex items-center justify-center overflow-visible"
+					style="perspective: 1400px; perspective-origin: 50% 50%;"
 				>
 					<div
-						bind:this={frameEl}
-						class="relative flex min-h-0 w-full items-center justify-center pointer-events-auto {$importedFromGallerySnapshot
+						bind:this={frameCaptureRoot}
+						class="origin-center will-change-transform [transform-style:preserve-3d] transition-[transform] duration-300 ease-out pointer-events-auto"
+						style="transform: {orientationTransform} scale({$zoom / 100});"
+					>
+					<div
+						class="relative flex min-h-0 w-full items-center justify-center {$importedFromGallerySnapshot
 							? 'border border-white/[0.12] ring-1 ring-white/[0.06]'
 							: 'border border-blue-500/45 shadow-2xl ring-1 ring-blue-400/20'}"
 						style:width="{$frameWidth}px"
@@ -348,6 +398,7 @@
 								</div>
 							{/if}
 						</div>
+					</div>
 					</div>
 				</div>
 			</div>

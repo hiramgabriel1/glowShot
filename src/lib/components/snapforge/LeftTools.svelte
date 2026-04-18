@@ -32,7 +32,7 @@
 
 {#if $leftSidebarExpanded}
 	<aside
-		class="flex h-full min-h-0 w-[clamp(200px,26vw,228px)] max-w-[min(90vw,280px)] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#111111]"
+		class="relative z-10 flex h-full min-h-0 w-[clamp(200px,26vw,228px)] max-w-[min(90vw,280px)] shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[#111111]"
 		transition:fly={{ x: -20, duration: 200 }}
 	>
 		<div
@@ -131,7 +131,7 @@
 	</aside>
 {:else}
 	<div
-		class="flex h-full w-12 shrink-0 flex-col items-center border-r border-white/[0.06] bg-[#111111] py-3"
+		class="relative z-10 flex h-full w-12 shrink-0 flex-col items-center border-r border-white/[0.06] bg-[#111111] py-3"
 		in:fly={{ x: -12, duration: 200 }}
 		out:fly={{ x: -12, duration: 180 }}
 	>

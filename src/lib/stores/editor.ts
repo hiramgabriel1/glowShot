@@ -33,6 +33,9 @@ export const shadowEnabled = writable(true);
 export const shadowIntensity = writable(52);
 export const zoom = writable(85);
 
+/** Índice en ORIENTATION_PRESETS: vista 3D del marco (shots.so). */
+export const orientationPresetIndex = writable(0);
+
 /** Right properties panel: expanded vs slim rail */
 export const rightSidebarExpanded = writable(true);
 
@@ -44,14 +47,18 @@ export const leftSidebarExpanded = writable(true);
  */
 export const newProjectGeneration = writable(0);
 
-/** Restablece el editor a valores por defecto (no borra Mis creaciones). */
-export function startNewProject(): void {
+/**
+ * Se incrementa tras confirmar «Nuevo proyecto»; EditorCanvas guarda el marco y aplica estado vacío.
+ */
+export const newProjectIntent = writable(0);
+
+function resetEditorBaseline(opts: { mockup: boolean }): void {
 	activeTool.set('canvas');
 	frameWidth.set(1200);
 	frameHeight.set(675);
 	aspectRatio.set('16:9');
 	padding.set(64);
-	mockupEnabled.set(true);
+	mockupEnabled.set(opts.mockup);
 	importedImageDataUrl.set(null);
 	importedFromGallerySnapshot.set(false);
 	mockupPlatform.set('macos');
@@ -64,10 +71,21 @@ export function startNewProject(): void {
 	shadowEnabled.set(true);
 	shadowIntensity.set(52);
 	zoom.set(85);
+	orientationPresetIndex.set(0);
 	leftSidebarExpanded.set(true);
 	rightSidebarExpanded.set(true);
 	topTab.set('editor');
 	newProjectGeneration.update((n) => n + 1);
+}
+
+/** Restablece el editor con mockup por defecto (no borra Mis creaciones). */
+export function startNewProject(): void {
+	resetEditorBaseline({ mockup: true });
+}
+
+/** Marco vacío (sin mockup ni imagen) para importar una foto. */
+export function startNewProjectEmptyImport(): void {
+	resetEditorBaseline({ mockup: false });
 }
 
 /** Preset gradients (12 + selection matches reference UI) */

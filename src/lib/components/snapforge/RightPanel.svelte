@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { ChevronRight, SlidersHorizontal } from 'lucide-svelte';
+	import { Box, ChevronRight, SlidersHorizontal } from 'lucide-svelte';
 	import { fly } from 'svelte/transition';
+	import { ORIENTATION_PRESETS } from '$lib/snapforge/orientation-presets';
 	import {
 		applyAspect,
 		aspectRatio,
@@ -15,6 +16,7 @@
 		mockupEnabled,
 		mockupPlatform,
 		mockupTheme,
+		orientationPresetIndex,
 		outerRadius,
 		padding,
 		rightSidebarExpanded,
@@ -32,7 +34,7 @@
 
 {#if $rightSidebarExpanded}
 	<aside
-		class="flex h-full w-[clamp(260px,32vw,320px)] max-w-[min(92vw,380px)] shrink-0 flex-col overflow-y-auto overflow-x-hidden border-l border-white/[0.06] bg-[#151515]"
+		class="relative z-10 flex h-full w-[clamp(260px,32vw,320px)] max-w-[min(92vw,380px)] shrink-0 flex-col overflow-y-auto overflow-x-hidden border-l border-white/[0.06] bg-[#151515]"
 		transition:fly={{ x: 20, duration: 200 }}
 	>
 		<div
@@ -88,6 +90,48 @@
 				oninput={(e) => padding.set(Number(e.currentTarget.value))}
 			/>
 			<span class="w-7 text-right font-mono text-[12px] text-zinc-400">{$padding}</span>
+		</div>
+	</section>
+
+	<!-- Vista 3D (orientación del marco) -->
+	<section class="border-b border-white/[0.06] p-4">
+		<div class="mb-3 flex items-center gap-2">
+			<Box class="size-3.5 shrink-0 text-zinc-500" strokeWidth={2} />
+			<h3
+				class="min-w-0 text-[11px] font-semibold uppercase leading-snug tracking-[0.12em] text-zinc-500"
+			>
+				Vista 3D
+			</h3>
+		</div>
+		<p class="mb-3 text-[12px] leading-snug text-zinc-500">
+			Ángulo del marco en el lienzo (tipo shots.so). Zoom sigue igual abajo.
+		</p>
+		<div class="grid grid-cols-2 gap-2">
+			{#each ORIENTATION_PRESETS as p, i}
+				<button
+					type="button"
+					class="group flex flex-col gap-1.5 rounded-xl border p-1.5 text-left transition {$orientationPresetIndex ===
+					i
+						? 'border-white/25 bg-[#222] ring-1 ring-white/15'
+						: 'border-white/[0.08] bg-[#1a1a1a] hover:border-white/15'}"
+					onclick={() => orientationPresetIndex.set(i)}
+				>
+					<div
+						class="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-gradient-to-br from-orange-500/90 via-rose-500/25 to-purple-900/95"
+					>
+						<div
+							class="absolute inset-0 flex items-center justify-center"
+							style="perspective: 80px; perspective-origin: 50% 50%;"
+						>
+							<div
+								class="h-[44%] w-[60%] rounded-md bg-[#111] shadow-xl ring-1 ring-white/15"
+								style="transform: rotateX({p.rx * 0.42}deg) rotateY({p.ry * 0.42}deg) rotateZ({p.rz * 0.42}deg); transform-style: preserve-3d;"
+							></div>
+						</div>
+					</div>
+					<span class="truncate px-0.5 text-[11px] font-medium text-zinc-300">{p.label}</span>
+				</button>
+			{/each}
 		</div>
 	</section>
 
@@ -284,7 +328,7 @@
 	</aside>
 {:else}
 	<div
-		class="flex h-full w-12 shrink-0 flex-col items-center border-l border-white/[0.06] bg-[#151515] py-3"
+		class="relative z-10 flex h-full w-12 shrink-0 flex-col items-center border-l border-white/[0.06] bg-[#151515] py-3"
 		in:fly={{ x: 12, duration: 200 }}
 		out:fly={{ x: 12, duration: 180 }}
 	>

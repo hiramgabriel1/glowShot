@@ -97,7 +97,7 @@
 				type="button"
 				class="flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-transparent px-2 py-2 text-[13px] font-medium text-zinc-300 transition hover:bg-white/[0.04] sm:gap-2 sm:px-3"
 				onclick={runNewProjectFlow}
-				title="Nuevo proyecto: restablecer el editor"
+				title="Nuevo proyecto: guardar en Mis creaciones y marco vacío para importar"
 			>
 				<FilePlus class="size-4 shrink-0 text-zinc-400" strokeWidth={1.75} />
 				<span class="hidden xl:inline">Nuevo proyecto</span>

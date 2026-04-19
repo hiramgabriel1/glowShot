@@ -19,7 +19,7 @@ function imageFormatFromFile(file: File): PutPhotoFormat {
 	return { extension: 'png', contentType: 'image/png' };
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, url }) => {
 	if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
 		throw error(503, 'S3 no configurado (faltan AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)');
 	}
@@ -57,8 +57,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		const format =
 			multipartFormat ??
 			({ extension: 'png', contentType: 'image/png' } satisfies PutPhotoFormat);
-		const { url, key } = await putPhoto(buffer, id, format);
-		return json({ ok: true, url, key });
+		const kindRaw = (url.searchParams.get('kind') ?? 'photo').toLowerCase();
+		const kind = kindRaw === 'creation' ? 'creation' : 'photo';
+		const { url: outUrl, key } = await putPhoto(buffer, id, format, kind);
+		return json({ ok: true, url: outUrl, key });
 	} catch (e) {
 		console.error('[api/photos/upload]', e);
 		throw error(502, 'Error al subir a S3');

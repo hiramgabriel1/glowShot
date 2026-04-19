@@ -21,6 +21,9 @@ import {
 const STORAGE_KEY = 'snapforge-creations-v1';
 const MAX_ITEMS = 48;
 
+/** Evita dos capturas a la vez (doble clic en Guardar / eventos duplicados → dos miniaturas distintas). */
+let saveToCreationsInProgress = false;
+
 export type Creation = {
 	id: string;
 	name: string;
@@ -115,30 +118,38 @@ function isDuplicateCreation(list: Creation[], imageDataUrl: string, contentHash
 export async function saveFrameToCreations(
 	frameEl: HTMLElement
 ): Promise<'added' | 'duplicate'> {
-	const blob = await captureFramePngBlob(frameEl, {
-		pixelRatio: 1,
-		maxOutputSide: 640
-	});
-	const buf = await blob.arrayBuffer();
-	const contentHash = await sha256Hex(buf);
-	const dataUrlLocal = await blobToDataUrl(new Blob([buf], { type: 'image/png' }));
-
-	const list = get(creations);
-	if (isDuplicateCreation(list, dataUrlLocal, contentHash)) {
-		return 'duplicate';
+	if (saveToCreationsInProgress) {
+		throw new Error('Espera a que termine el guardado anterior.');
 	}
+	saveToCreationsInProgress = true;
+	try {
+		const blob = await captureFramePngBlob(frameEl, {
+			pixelRatio: 1,
+			maxOutputSide: 640
+		});
+		const buf = await blob.arrayBuffer();
+		const contentHash = await sha256Hex(buf);
+		const dataUrlLocal = await blobToDataUrl(new Blob([buf], { type: 'image/png' }));
 
-	const remoteUrl = await tryUploadCreationPng(blob);
-	const imageDataUrl = remoteUrl ?? dataUrlLocal;
+		const list = get(creations);
+		if (isDuplicateCreation(list, dataUrlLocal, contentHash)) {
+			return 'duplicate';
+		}
 
-	creations.add({
-		id: crypto.randomUUID(),
-		name: formatCreationName(),
-		createdAt: new Date().toISOString(),
-		imageDataUrl,
-		contentHash
-	});
-	return 'added';
+		const remoteUrl = await tryUploadCreationPng(blob);
+		const imageDataUrl = remoteUrl ?? dataUrlLocal;
+
+		creations.add({
+			id: crypto.randomUUID(),
+			name: formatCreationName(),
+			createdAt: new Date().toISOString(),
+			imageDataUrl,
+			contentHash
+		});
+		return 'added';
+	} finally {
+		saveToCreationsInProgress = false;
+	}
 }
 
 function loadImageDimensions(src: string): Promise<{ w: number; h: number }> {

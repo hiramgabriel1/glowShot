@@ -4,6 +4,7 @@ import { env } from '$env/dynamic/private';
 const DEFAULT_REGION = 'us-east-2';
 const DEFAULT_BUCKET = 'glowshowcontent-716200068584-us-east-2-an';
 const DEFAULT_PHOTOS_PREFIX = 'photos/';
+const DEFAULT_CREATIONS_PREFIX = 'creations/';
 
 function normalizePrefix(p: string): string {
 	const t = p.trim();
@@ -19,10 +20,13 @@ export function getS3PhotosConfig(): {
 	bucket: string;
 	/** Prefijo de keys, siempre termina en `/` (ej. `photos/`). */
 	photosPrefix: string;
+	/** Prefijo de keys para creaciones (miniaturas/export combinados). */
+	creationsPrefix: string;
 } {
 	return {
 		region: env.AWS_REGION ?? DEFAULT_REGION,
 		bucket: env.S3_BUCKET ?? DEFAULT_BUCKET,
-		photosPrefix: normalizePrefix(env.S3_PHOTOS_PREFIX ?? DEFAULT_PHOTOS_PREFIX)
+		photosPrefix: normalizePrefix(env.S3_PHOTOS_PREFIX ?? DEFAULT_PHOTOS_PREFIX),
+		creationsPrefix: normalizePrefix(env.S3_CREATIONS_PREFIX ?? DEFAULT_CREATIONS_PREFIX)
 	};
 }

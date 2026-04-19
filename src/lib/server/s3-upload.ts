@@ -47,18 +47,27 @@ export type PutPhotoFormat = {
 	contentType: string;
 };
 
+export type PutObjectKind = 'photo' | 'creation';
+
+function prefixForKind(cfg: ReturnType<typeof getS3PhotosConfig>, kind: PutObjectKind): string {
+	return kind === 'creation' ? cfg.creationsPrefix : cfg.photosPrefix;
+}
+
 /**
- * Sube una imagen al prefijo `photos/` del bucket.
+ * Sube una imagen al bucket bajo el prefijo correspondiente.
  */
 export async function putPhoto(
 	body: Buffer,
 	filenameBase: string,
-	format: PutPhotoFormat
+	format: PutPhotoFormat,
+	kind: PutObjectKind = 'photo'
 ): Promise<{ key: string; url: string }> {
-	const { region, bucket, photosPrefix } = getS3PhotosConfig();
+	const cfg = getS3PhotosConfig();
+	const { region, bucket } = cfg;
 	const safe = filenameBase.replace(/[^a-zA-Z0-9-]/g, '') || randomUUID();
 	const ext = format.extension.replace(/^\./, '');
-	const key = `${photosPrefix}${safe}.${ext}`;
+	const prefix = prefixForKind(cfg, kind);
+	const key = `${prefix}${safe}.${ext}`;
 
 	const client = getClient(region);
 	await client.send(
@@ -77,7 +86,7 @@ export async function putPhoto(
 
 /** Sube PNG (capturas del editor). */
 export async function putPngPhoto(body: Buffer, filenameBase: string): Promise<{ key: string; url: string }> {
-	return putPhoto(body, filenameBase, { extension: 'png', contentType: 'image/png' });
+	return putPhoto(body, filenameBase, { extension: 'png', contentType: 'image/png' }, 'creation');
 }
 
 export type ListedPhoto = {
@@ -86,9 +95,11 @@ export type ListedPhoto = {
 	lastModified: string;
 };
 
-/** Lista objetos bajo el prefijo `photos/`. */
-export async function listPhotosInBucket(): Promise<ListedPhoto[]> {
-	const { region, bucket, photosPrefix } = getS3PhotosConfig();
+/** Lista objetos bajo un prefijo. */
+export async function listPhotosInBucket(kind: PutObjectKind = 'creation'): Promise<ListedPhoto[]> {
+	const cfg = getS3PhotosConfig();
+	const { region, bucket } = cfg;
+	const prefix = prefixForKind(cfg, kind);
 	const client = getClient(region);
 	const rows: { key: string; lastModified: string }[] = [];
 	let continuationToken: string | undefined;
@@ -96,7 +107,7 @@ export async function listPhotosInBucket(): Promise<ListedPhoto[]> {
 		const resp = await client.send(
 			new ListObjectsV2Command({
 				Bucket: bucket,
-				Prefix: photosPrefix,
+				Prefix: prefix,
 				ContinuationToken: continuationToken,
 				MaxKeys: 500
 			})
@@ -122,9 +133,11 @@ export async function listPhotosInBucket(): Promise<ListedPhoto[]> {
 }
 
 /** Elimina un objeto; `key` debe ser la clave completa bajo el bucket y el prefijo configurado. */
-export async function deletePhotoByKey(key: string): Promise<void> {
-	const { region, bucket, photosPrefix } = getS3PhotosConfig();
-	if (!key.startsWith(photosPrefix) || key.includes('..') || key.includes('//')) {
+export async function deletePhotoByKey(key: string, kind: PutObjectKind = 'creation'): Promise<void> {
+	const cfg = getS3PhotosConfig();
+	const { region, bucket } = cfg;
+	const prefix = prefixForKind(cfg, kind);
+	if (!key.startsWith(prefix) || key.includes('..') || key.includes('//')) {
 		throw new Error('invalid key');
 	}
 	const client = getClient(region);

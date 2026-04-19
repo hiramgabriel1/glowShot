@@ -3,6 +3,94 @@ use image::ImageEncoder;
 use tauri::Emitter;
 use tauri::Manager;
 
+#[derive(serde::Deserialize)]
+pub struct CaptureRect {
+  x: f64,
+  y: f64,
+  width: f64,
+  height: f64,
+  /// Si se indica, se reescala el PNG manteniendo proporción cuando el lado mayor lo supera.
+  #[serde(default, rename = "maxSide")]
+  max_side: Option<u32>,
+}
+
+/// Captura un rectángulo de pantalla (en puntos lógicos, origen top-left de la pantalla principal)
+/// usando `/usr/sbin/screencapture`. Necesario porque WebKit/Tauri no rasteriza correctamente
+/// `<img>` dentro de `<foreignObject>` (lo que usa `html-to-image`), y la foto desaparece del PNG.
+/// La captura nativa coge exactamente lo que el usuario ve en el editor.
+#[cfg(target_os = "macos")]
+#[tauri::command]
+fn capture_screen_rect_png(rect: CaptureRect) -> Result<tauri::ipc::Response, String> {
+  let x = rect.x.round() as i32;
+  let y = rect.y.round() as i32;
+  let w = rect.width.max(1.0).round() as i32;
+  let h = rect.height.max(1.0).round() as i32;
+
+  let nanos = std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .map(|d| d.as_nanos())
+    .unwrap_or(0);
+  let tmp_path = std::env::temp_dir().join(format!(
+    "glowshot-capture-{}-{nanos}.png",
+    std::process::id()
+  ));
+
+  let region = format!("{x},{y},{w},{h}");
+  let status = std::process::Command::new("/usr/sbin/screencapture")
+    .args(["-x", "-t", "png", "-R", &region])
+    .arg(&tmp_path)
+    .status()
+    .map_err(|e| format!("screencapture spawn: {e}"))?;
+
+  if !status.success() {
+    let _ = std::fs::remove_file(&tmp_path);
+    return Err(format!("screencapture exit: {status:?}"));
+  }
+
+  let bytes = std::fs::read(&tmp_path).map_err(|e| format!("read png: {e}"))?;
+  let _ = std::fs::remove_file(&tmp_path);
+
+  let final_bytes = match rect.max_side {
+    Some(max_side) if max_side > 0 => match image::load_from_memory(&bytes) {
+      Ok(img) => {
+        let (iw, ih) = (img.width(), img.height());
+        if iw.max(ih) > max_side {
+          let resized =
+            img.resize(max_side, max_side, image::imageops::FilterType::Lanczos3);
+          let rgba = resized.to_rgba8();
+          let mut out: Vec<u8> = Vec::new();
+          let encoder = image::codecs::png::PngEncoder::new(&mut out);
+          if encoder
+            .write_image(
+              &rgba,
+              resized.width(),
+              resized.height(),
+              image::ExtendedColorType::Rgba8,
+            )
+            .is_ok()
+          {
+            out
+          } else {
+            bytes
+          }
+        } else {
+          bytes
+        }
+      }
+      Err(_) => bytes,
+    },
+    _ => bytes,
+  };
+
+  Ok(tauri::ipc::Response::new(final_bytes))
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+fn capture_screen_rect_png(_rect: CaptureRect) -> Result<tauri::ipc::Response, String> {
+  Err("Native screen capture is only implemented on macOS".to_string())
+}
+
 #[cfg(target_os = "macos")]
 mod macos_dock;
 
@@ -20,6 +108,7 @@ fn run_interactive_screencapture_to_clipboard() -> std::io::Result<std::process:
     .status()
 }
 
+/* Convert a clipboard image to a PNG data URL */
 fn clipboard_to_png_data_url() -> Option<String> {
   let mut cb = arboard::Clipboard::new().ok()?;
   let img = cb.get_image().ok()?;
@@ -42,6 +131,7 @@ fn clipboard_to_png_data_url() -> Option<String> {
   ))
 }
 
+/* Spawn a thread to capture a screenshot and emit it to the main window */
 fn spawn_snap_select(app: tauri::AppHandle) {
   let app = app.clone();
   std::thread::spawn(move || {
@@ -82,7 +172,8 @@ pub fn run() {
     let b = tauri::Builder::default()
       .plugin(tauri_plugin_dialog::init())
       .plugin(tauri_plugin_fs::init())
-      .plugin(tauri_plugin_clipboard_manager::init());
+      .plugin(tauri_plugin_clipboard_manager::init())
+      .invoke_handler(tauri::generate_handler![capture_screen_rect_png]);
     #[cfg(desktop)]
     {
       b.menu(|app| {
@@ -135,7 +226,7 @@ pub fn run() {
       let snap_i = tauri::menu::MenuItem::with_id(
         app,
         "snap_select",
-        "Seleccionar snap…",
+        "Seleccionar snap…",  
         true,
         None::<&str>,
       )?;

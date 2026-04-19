@@ -26,7 +26,14 @@ async function postUpload(fd: FormData): Promise<string | null> {
 export async function tryUploadCreationPng(blob: Blob): Promise<string | null> {
 	const fd = new FormData();
 	fd.append('file', blob, 'creation.png');
-	return postUpload(fd);
+	try {
+		const res = await fetch(apiUrl('/api/photos/upload?kind=creation'), { method: 'POST', body: fd });
+		if (!res.ok) return null;
+		const data = (await res.json()) as { url?: string };
+		return typeof data.url === 'string' ? data.url : null;
+	} catch {
+		return null;
+	}
 }
 
 /**

@@ -27,6 +27,7 @@
 </script>
 
 <div
+	data-glow-export-hide="true"
 	class="pointer-events-none fixed bottom-4 right-4 z-[300] flex max-w-[min(100vw-2rem,22rem)] flex-col gap-2"
 	aria-live="polite"
 	aria-relevant="additions"

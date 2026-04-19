@@ -92,14 +92,13 @@
 	);
 
 	/**
-	 * Nodo del marco con fondo, padding y sombra (sin el wrapper 3D/zoom).
-	 * html-to-image rasteriza mal si se captura el div con transform; así «Mis creaciones»
-	 * incluye el degradado y el estilo del marco.
+	 * Lienzo exportable: cuadrícula + pan + perspectiva + 3D + marco (degradado).
+	 * `captureFramePngBlob` usa getBoundingClientRect() para incluir rotación y encuadre.
 	 */
-	let frameExportEl = $state<HTMLElement | undefined>();
+	let frameExportCaptureRoot = $state<HTMLElement | undefined>();
 
 	$effect(() => {
-		setSnapforgeExportFrame(frameExportEl ?? null);
+		setSnapforgeExportFrame(frameExportCaptureRoot ?? null);
 		return () => setSnapforgeExportFrame(null);
 	});
 
@@ -113,8 +112,8 @@
 
 	async function runNewProjectAfterConfirm() {
 		try {
-			if (frameExportEl) {
-				const result = await saveFrameToCreations(frameExportEl);
+			if (frameExportCaptureRoot) {
+				const result = await saveFrameToCreations(frameExportCaptureRoot);
 				startNewProjectEmptyImport();
 				if (result === 'added') {
 					toast.success('Guardado en Mis creaciones. Marco vacío: importa una foto.');
@@ -256,14 +255,14 @@
 	}
 
 	async function startOverWithSave() {
-		if (!frameExportEl) {
+		if (!frameExportCaptureRoot) {
 			closeStartOver();
 			clearFrameToEmpty();
 			toast.info('Marco vaciado');
 			return;
 		}
 		try {
-			const result = await saveFrameToCreations(frameExportEl);
+			const result = await saveFrameToCreations(frameExportCaptureRoot);
 			closeStartOver();
 			clearFrameToEmpty();
 			if (result === 'added') {
@@ -304,13 +303,18 @@
 <div
 	class="relative isolate z-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[#141414]"
 >
-	<!-- Dot grid -->
 	<div
-		class="pointer-events-none absolute inset-0 opacity-90"
-		style="background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px); background-size: 18px 18px;"
-	></div>
+		bind:this={frameExportCaptureRoot}
+		class="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-[#141414] pb-20"
+	>
+		<!-- Dot grid (dentro del área exportada: mismo lienzo que en pantalla).
+		     Se oculta durante la captura nativa para no contaminar el chroma-key. -->
+		<div
+			data-glow-export-hide="true"
+			class="pointer-events-none absolute inset-0 z-0 opacity-90"
+			style="background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px); background-size: 18px 18px;"
+		></div>
 
-	<div class="relative min-h-0 min-w-0 flex-1 overflow-hidden pb-20">
 		<div
 			class="absolute inset-0 z-[5] touch-none select-none"
 			class:pointer-events-none={!handToolActive}
@@ -343,7 +347,6 @@
 						style="transform: {orientationTransform} scale({$zoom / 100});"
 					>
 					<div
-						bind:this={frameExportEl}
 						class="relative flex min-h-0 w-full items-center justify-center {$importedFromGallerySnapshot
 							? 'border border-white/[0.12] ring-1 ring-white/[0.06]'
 							: 'border border-blue-500/45 shadow-2xl ring-1 ring-blue-400/20'}"
@@ -416,6 +419,7 @@
 
 	<!-- Zoom bar -->
 	<div
+		data-glow-export-hide="true"
 		class="absolute bottom-3 left-1/2 z-20 flex max-w-[calc(100vw-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-full border border-white/[0.08] bg-[#1f1f1f]/95 px-1.5 py-1.5 shadow-lg backdrop-blur-sm sm:bottom-5 sm:max-w-[min(100vw-2rem,52rem)] sm:flex-nowrap sm:px-2"
 	>
 		<button

@@ -11,7 +11,8 @@ export const GET: RequestHandler = async () => {
 		throw error(503, 'S3 no configurado');
 	}
 	try {
-		const items = await listPhotosInBucket();
+		// "Mis creaciones" lista solo las capturas combinadas (creations/), no las fotos importadas (photos/).
+		const items = await listPhotosInBucket('creation');
 		return json({ items });
 	} catch (e) {
 		console.error('[api/photos GET]', e);
@@ -27,12 +28,12 @@ export const DELETE: RequestHandler = async ({ url }) => {
 	if (!key || key.length < 8) {
 		throw error(400, 'Parámetro key inválido');
 	}
-	const { photosPrefix } = getS3PhotosConfig();
-	if (!key.startsWith(photosPrefix) || key.includes('..')) {
+	const { creationsPrefix } = getS3PhotosConfig();
+	if (!key.startsWith(creationsPrefix) || key.includes('..')) {
 		throw error(400, 'Key no permitida');
 	}
 	try {
-		await deletePhotoByKey(key);
+		await deletePhotoByKey(key, 'creation');
 		return json({ ok: true });
 	} catch (e) {
 		console.error('[api/photos DELETE]', e);
